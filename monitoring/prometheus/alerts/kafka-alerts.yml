@@ -1,0 +1,157 @@
+---
+# Alert rules for Kafka monitoring
+groups:
+  - name: kafka_alerts
+    interval: 30s
+    rules:
+      # Kafka broker down
+      - alert: KafkaBrokerDown
+        expr: up{job="kafka-broker"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: kafka
+        annotations:
+          summary: "Kafka broker is down"
+          description: "Kafka broker {{ $labels.instance }} is down for more than 1 minute"
+
+      # High under-replicated partitions
+      - alert: KafkaUnderReplicatedPartitions
+        expr: kafka_server_replicamanager_underreplicatedpartitions > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: kafka
+        annotations:
+          summary: "Kafka has under-replicated partitions"
+          description: "Kafka broker {{ $labels.instance }} has {{ $value }} under-replicated partitions for 5 minutes"
+
+      # Offline partitions
+      - alert: KafkaOfflinePartitions
+        expr: kafka_controller_kafkacontroller_offlinepartitionscount > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: kafka
+        annotations:
+          summary: "Kafka has offline partitions"
+          description: "Kafka cluster has {{ $value }} offline partitions"
+
+      # High consumer lag
+      - alert: KafkaHighConsumerLag
+        expr: kafka_consumer_lag > 10000
+        for: 10m
+        labels:
+          severity: warning
+          service: kafka
+        annotations:
+          summary: "High consumer lag detected"
+          description: "Consumer {{ $labels.clientId }} has lag of {{ $value }} on topic {{ $labels.topic }}"
+
+      # ISR shrink rate high
+      - alert: KafkaISRShrinkRateHigh
+        expr: rate(kafka_server_replicamanager_isrshrinks[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: kafka
+        annotations:
+          summary: "High ISR shrink rate"
+          description: "Kafka broker {{ $labels.instance }} has high ISR shrink rate: {{ $value }}"
+
+      # Leader election rate high
+      - alert: KafkaLeaderElectionRateHigh
+        expr: rate(kafka_controller_controllerstats_leaderelectionrateandtimems_count[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: kafka
+        annotations:
+          summary: "High leader election rate"
+          description: "Kafka controller has high leader election rate: {{ $value }}"
+
+  - name: producer_alerts
+    interval: 30s
+    rules:
+      # Kraken producer down
+      - alert: KrakenProducerDown
+        expr: absent(up{job="kraken-producer"}) or up{job="kraken-producer"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: data-producer
+        annotations:
+          summary: "Kraken WebSocket producer is down"
+          description: "Kraken producer has been down for more than 2 minutes"
+
+      # Article scraper down
+      - alert: ArticleScraperDown
+        expr: absent(up{job="article-scraper"}) or up{job="article-scraper"} == 0
+        for: 5m
+        labels:
+          severity: warning
+          service: data-producer
+        annotations:
+          summary: "Article scraper is down"
+          description: "Article scraper has been down for more than 5 minutes"
+
+  - name: system_alerts
+    interval: 30s
+    rules:
+      # High disk usage
+      - alert: HighDiskUsage
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High disk usage detected"
+          description: "Disk usage is above 90% on {{ $labels.instance }}"
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is above 90% on {{ $labels.instance }}"
+
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 10m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is above 80% on {{ $labels.instance }}"
+
+  - name: timescaledb_alerts
+    interval: 30s
+    rules:
+      # TimescaleDB down
+      - alert: TimescaleDBDown
+        expr: up{job="timescaledb"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: timescaledb
+        annotations:
+          summary: "TimescaleDB is down"
+          description: "TimescaleDB has been down for more than 1 minute"
+
+      # Too many connections
+      - alert: TimescaleDBTooManyConnections
+        expr: pg_stat_database_numbackends > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: timescaledb
+        annotations:
+          summary: "Too many database connections"
+          description: "TimescaleDB has {{ $value }} connections"

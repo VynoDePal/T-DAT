@@ -1,0 +1,93 @@
+---
+# JMX Exporter configuration for Kafka brokers
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+
+rules:
+  # Broker metrics
+  - pattern: kafka.server<type=(.+), name=(.+), clientId=(.+), topic=(.+), partition=(.*)><>Value
+    name: kafka_server_$1_$2
+    type: GAUGE
+    labels:
+      clientId: "$3"
+      topic: "$4"
+      partition: "$5"
+
+  - pattern: kafka.server<type=(.+), name=(.+), clientId=(.+), brokerHost=(.+), brokerPort=(.+)><>Value
+    name: kafka_server_$1_$2
+    type: GAUGE
+    labels:
+      clientId: "$3"
+      broker: "$4:$5"
+
+  - pattern: kafka.server<type=(.+), name=(.+)><>Value
+    name: kafka_server_$1_$2
+    type: GAUGE
+
+  # Network request metrics
+  - pattern: kafka.network<type=RequestMetrics, name=RequestsPerSec, request=(.+)><>Count
+    name: kafka_network_requests_per_sec
+    type: COUNTER
+    labels:
+      request: "$1"
+
+  - pattern: kafka.network<type=RequestMetrics, name=TotalTimeMs, request=(.+)><>Mean
+    name: kafka_network_request_total_time_ms
+    type: GAUGE
+    labels:
+      request: "$1"
+
+  # Log metrics
+  - pattern: kafka.log<type=LogFlushStats, name=LogFlushRateAndTimeMs><>Count
+    name: kafka_log_flush_rate
+    type: COUNTER
+
+  - pattern: kafka.log<type=Log, name=Size, topic=(.+), partition=(.+)><>Value
+    name: kafka_log_size
+    type: GAUGE
+    labels:
+      topic: "$1"
+      partition: "$2"
+
+  # Controller metrics
+  - pattern: kafka.controller<type=KafkaController, name=(.+)><>Value
+    name: kafka_controller_$1
+    type: GAUGE
+
+  # Replica manager metrics
+  - pattern: kafka.server<type=ReplicaManager, name=(.+)><>Value
+    name: kafka_replica_manager_$1
+    type: GAUGE
+
+  # Request handler metrics
+  - pattern: kafka.server<type=KafkaRequestHandlerPool, name=RequestHandlerAvgIdlePercent><>MeanRate
+    name: kafka_request_handler_avg_idle_percent
+    type: GAUGE
+
+  # Producer/Consumer lag metrics
+  - pattern: kafka.server<type=FetcherLagMetrics, name=ConsumerLag, clientId=(.+), topic=(.+), partition=(.+)><>Value
+    name: kafka_consumer_lag
+    type: GAUGE
+    labels:
+      clientId: "$1"
+      topic: "$2"
+      partition: "$3"
+
+  # Topic metrics
+  - pattern: kafka.server<type=BrokerTopicMetrics, name=(BytesInPerSec|BytesOutPerSec|MessagesInPerSec), topic=(.+)><>Count
+    name: kafka_broker_topic_$1
+    type: COUNTER
+    labels:
+      topic: "$2"
+
+  - pattern: kafka.server<type=BrokerTopicMetrics, name=(BytesInPerSec|BytesOutPerSec|MessagesInPerSec)><>Count
+    name: kafka_broker_$1_total
+    type: COUNTER
+
+  # Partition metrics
+  - pattern: kafka.cluster<type=Partition, name=(.+), topic=(.+), partition=(.+)><>Value
+    name: kafka_cluster_partition_$1
+    type: GAUGE
+    labels:
+      topic: "$2"
+      partition: "$3"

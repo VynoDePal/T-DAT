@@ -1,0 +1,11 @@
+# PySpark
+pyspark==3.5.0
+
+# Kafka
+kafka-python==2.0.2
+
+# PostgreSQL
+psycopg2-binary==2.9.11
+
+# Utilitaires
+python-dotenv==1.0.0
