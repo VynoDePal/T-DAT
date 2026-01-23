@@ -2,7 +2,6 @@ services:
   # Zookeeper pour Kafka
   zookeeper:
     image: confluentinc/cp-zookeeper:7.7.0
-    container_name: crypto_viz_zookeeper
     ports:
       - "7072:7072"
     environment:
@@ -22,7 +21,6 @@ services:
   # Kafka pour streaming de données
   kafka:
     image: confluentinc/cp-kafka:7.7.0
-    container_name: crypto_viz_kafka
     ports:
       - "9092:9092"
       - "29092:29092"
@@ -67,11 +65,10 @@ services:
   # TimescaleDB pour les séries temporelles
   timescaledb:
     image: timescale/timescaledb:latest-pg18
-    container_name: crypto_viz_timescaledb
     environment:
-      POSTGRES_DB: crypto_viz_ts
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ${POSTGRES_DB:-crypto_viz_ts}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     ports:
       - "15432:5432"
     volumes:
@@ -86,7 +83,6 @@ services:
   # Redis pour Django Channels (optionnel)
   redis:
     image: redis:8-alpine
-    container_name: crypto_viz_redis
     ports:
       - "6380:6379"
     volumes:
@@ -100,23 +96,22 @@ services:
   # Backend Django
   django:
     build: ./crypto_viz_backend
-    container_name: crypto_viz_backend
     command: >
       sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
              python manage.py createsuperuser --noinput --username admin --email admin@cryptoviz.com || true &&
              gunicorn crypto_viz.wsgi:application --bind 0.0.0.0:8000"
     environment:
-      - DEBUG=True
+      - DEBUG=${DEBUG:-True}
       - KAFKA_SERVERS=kafka:29092
       - TIMESCALE_DB_HOST=timescaledb
-      - TIMESCALE_DB_NAME=crypto_viz_ts
-      - TIMESCALE_DB_USER=postgres
-      - TIMESCALE_DB_PASSWORD=password
+      - TIMESCALE_DB_NAME=${POSTGRES_DB:-crypto_viz_ts}
+      - TIMESCALE_DB_USER=${POSTGRES_USER:-postgres}
+      - TIMESCALE_DB_PASSWORD=${POSTGRES_PASSWORD:-password}
       - REDIS_HOST=redis
-      - DJANGO_SUPERUSER_USERNAME=admin
-      - DJANGO_SUPERUSER_EMAIL=admin@cryptoviz.com
-      - DJANGO_SUPERUSER_PASSWORD=admin
+      - DJANGO_SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME:-admin}
+      - DJANGO_SUPERUSER_EMAIL=${DJANGO_SUPERUSER_EMAIL:-admin@cryptoviz.com}
+      - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD:-admin}
     ports:
       - "8000:8000"
     volumes:
@@ -133,7 +128,6 @@ services:
   # Prometheus pour monitoring
   prometheus:
     image: prom/prometheus:latest
-    container_name: crypto_viz_prometheus
     ports:
       - "9090:9090"
     volumes:
@@ -150,12 +144,11 @@ services:
   # Grafana pour visualisation
   grafana:
     image: grafana/grafana:latest
-    container_name: crypto_viz_grafana
     ports:
       - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
       - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - grafana_data:/var/lib/grafana
@@ -168,7 +161,6 @@ services:
   # Kafka Exporter pour métriques consommateurs
   kafka-exporter:
     image: danielqsj/kafka-exporter:latest
-    container_name: crypto_viz_kafka_exporter
     ports:
       - "9308:9308"
     command:
@@ -181,7 +173,7 @@ services:
   # Node Exporter pour métriques système
   node-exporter:
     image: prom/node-exporter:latest
-    container_name: crypto_viz_node_exporter
+    exclude_from_hc: true
     ports:
       - "9100:9100"
     command:
@@ -197,7 +189,6 @@ services:
   # Redis Exporter pour métriques Redis
   redis-exporter:
     image: oliver006/redis_exporter:latest
-    container_name: crypto_viz_redis_exporter
     ports:
       - "9121:9121"
     environment:
@@ -210,11 +201,10 @@ services:
   # Postgres Exporter pour métriques TimescaleDB
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:latest
-    container_name: crypto_viz_postgres_exporter
     ports:
       - "9187:9187"
     environment:
-      - DATA_SOURCE_NAME=postgresql://postgres:password@timescaledb:5432/crypto_viz_ts?sslmode=disable
+      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@timescaledb:5432/${POSTGRES_DB:-crypto_viz_ts}?sslmode=disable
     depends_on:
       timescaledb:
         condition: service_healthy
