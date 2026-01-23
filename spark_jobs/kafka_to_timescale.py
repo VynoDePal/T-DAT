@@ -34,8 +34,8 @@ def create_spark_session():
             .getOrCreate()
     else:
         # Fallback: télécharger depuis Maven (ancienne méthode)
-        print("⚠️  Dossier jars/ non trouvé. Téléchargement depuis Maven...")
-        print(f"   Exécutez: ./scripts/download_spark_jars.sh")
+        print(f"    Dossier jars/ non trouvé. Téléchargement depuis Maven...")
+        print(f"    Exécutez: ./scripts/download_spark_jars.sh")
         return SparkSession.builder \
             .appName(config.SPARK_APP_NAME) \
             .master(config.SPARK_MASTER) \

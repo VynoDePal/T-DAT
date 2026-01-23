@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
 """
 Producteur Kafka pour les données de prix et trades depuis Kraken WebSocket.
-Inspiré de T-DAT-1 : https://github.com/Izzoudine/T-DAT-1
 """
 
 import json
@@ -47,7 +45,7 @@ PRICE_CHANGE_THRESHOLD = 1.0
 def delivery_report(err, msg):
     """Callback pour les confirmations de livraison."""
     if err is not None:
-        print(f'❌ Message delivery failed: {err}')
+        print(f'Message delivery failed: {err}')
 
 def send_alert(pair, alert_type, value):
     """Envoie une alerte vers le topic rawalert."""
@@ -65,13 +63,13 @@ def send_alert(pair, alert_type, value):
             callback=delivery_report
         )
         producer.poll(0)
-        print(f"🚨 ALERT: {pair} - {alert_type} - {value:.2f}%")
+        print(f"ALERT: {pair} - {alert_type} - {value:.2f}%")
     except Exception as e:
-        print(f"❌ Kafka alert error: {e}")
+        print(f"Kafka alert error: {e}")
 
 def on_error(ws, error):
     """Gestion des erreurs WebSocket."""
-    print(f"❌ WebSocket Error: {error}")
+    print(f"WebSocket Error: {error}")
     if isinstance(error, Exception):
         print(f"Error type: {type(error).__name__}: {error}")
 
@@ -81,7 +79,7 @@ def on_close(ws, close_status_code, close_msg):
 
 def on_open(ws):
     """Souscription aux canaux Kraken au démarrage."""
-    print("✅ WebSocket Kraken connecté")
+    print("WebSocket Kraken connecté")
     
     # Abonnement ticker
     ws.send(json.dumps({
@@ -89,7 +87,7 @@ def on_open(ws):
         "pair": kraken_top8_pairs,
         "subscription": {"name": "ticker"}
     }))
-    print(f"📊 Souscription aux tickers pour {len(kraken_top8_pairs)} paires")
+    print(f"Souscription aux tickers pour {len(kraken_top8_pairs)} paires")
     
     # Abonnement trades
     ws.send(json.dumps({
@@ -112,7 +110,7 @@ def on_message(ws, message):
         if data.get("event") in ["systemStatus", "subscriptionStatus"]:
             return
     
-    # ------------------- TICKER DATA -------------------
+    # TICKER DATA
     if isinstance(data, list) and len(data) >= 4 and data[-2] == "ticker":
         ticker = data[1]
         pair = data[-1]
@@ -156,11 +154,11 @@ def on_message(ws, message):
                 callback=delivery_report
             )
             producer.poll(0)
-            print(f"📊 {pair:12} | Last: ${last_price:>10,.2f} | Change: {payload['pct_change']:>6}% | Vol: {volume_24h:>10,.2f}")
+            print(f"{pair:12} | Last: ${last_price:>10,.2f} | Change: {payload['pct_change']:>6}% | Vol: {volume_24h:>10,.2f}")
         except Exception as e:
-            print(f"❌ Kafka ticker error: {e}")
+            print(f"Kafka ticker error: {e}")
     
-    # ------------------- TRADE DATA -------------------
+    # TRADE DATA
     if isinstance(data, list) and len(data) >= 4 and data[-2] == "trade":
         pair = data[-1]
         trades = data[1]
@@ -183,9 +181,9 @@ def on_message(ws, message):
                 )
                 producer.poll(0)
                 side_emoji = "🟢" if payload['side'] == 'b' else "🔴"
-                print(f"💱 {side_emoji} {pair:12} | ${payload['price']:>10,.2f} | Vol: {payload['volume']:>8,.4f}")
+                print(f"{side_emoji} {pair:12} | ${payload['price']:>10,.2f} | Vol: {payload['volume']:>8,.4f}")
             except Exception as e:
-                print(f"❌ Kafka trade error: {e}")
+                print(f"Kafka trade error: {e}")
 
 def periodic_flush():
     """Flush périodique du producteur Kafka."""
@@ -200,10 +198,10 @@ if __name__ == "__main__":
     print("=" * 80)
     print("🚀 Kraken WebSocket → Kafka Producer")
     print("=" * 80)
-    print(f"📡 Kafka: {KAFKA_SERVERS}")
-    print(f"📊 Topics: rawticker, rawtrade, rawalert")
-    print(f"🌍 WebSocket: {WS_URL}")
-    print(f"💰 Pairs: {', '.join(kraken_top8_pairs)}")
+    print(f"Kafka: {KAFKA_SERVERS}")
+    print(f"Topics: rawticker, rawtrade, rawalert")
+    print(f"WebSocket: {WS_URL}")
+    print(f"Pairs: {', '.join(kraken_top8_pairs)}")
     print("=" * 80)
     print()
     
