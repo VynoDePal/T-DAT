@@ -48,9 +48,10 @@ services:
       - kafka_data:/var/lib/kafka/data
     healthcheck:
       test: ["CMD-SHELL", "nc -z localhost 29092 || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
 
   # TimescaleDB pour les séries temporelles
   timescaledb:
@@ -67,92 +68,25 @@ services:
         source: ./init-timescale.sql
         target: /docker-entrypoint-initdb.d/init.sql
         content: |
-          -- Script d'initialisation TimescaleDB pour CRYPTO VIZ
           CREATE EXTENSION IF NOT EXISTS timescaledb;
-          
-          -- Table ticker_data
-          CREATE TABLE IF NOT EXISTS ticker_data (
-              timestamp TIMESTAMPTZ NOT NULL,
-              pair VARCHAR(20) NOT NULL,
-              last DOUBLE PRECISION NOT NULL,
-              bid DOUBLE PRECISION,
-              ask DOUBLE PRECISION,
-              volume_24h DOUBLE PRECISION
-          );
+          CREATE TABLE IF NOT EXISTS ticker_data (timestamp TIMESTAMPTZ NOT NULL, pair VARCHAR(20) NOT NULL, last DOUBLE PRECISION NOT NULL, bid DOUBLE PRECISION, ask DOUBLE PRECISION, volume_24h DOUBLE PRECISION);
           SELECT create_hypertable('ticker_data', 'timestamp', if_not_exists => TRUE);
-          CREATE INDEX IF NOT EXISTS idx_ticker_pair_timestamp ON ticker_data (pair, timestamp DESC);
-          
-          -- Table trade_data
-          CREATE TABLE IF NOT EXISTS trade_data (
-              timestamp TIMESTAMPTZ NOT NULL,
-              pair VARCHAR(20) NOT NULL,
-              price DOUBLE PRECISION NOT NULL,
-              volume DOUBLE PRECISION NOT NULL,
-              side VARCHAR(1) NOT NULL
-          );
+          CREATE TABLE IF NOT EXISTS trade_data (timestamp TIMESTAMPTZ NOT NULL, pair VARCHAR(20) NOT NULL, price DOUBLE PRECISION NOT NULL, volume DOUBLE PRECISION NOT NULL, side VARCHAR(1) NOT NULL);
           SELECT create_hypertable('trade_data', 'timestamp', if_not_exists => TRUE);
-          CREATE INDEX IF NOT EXISTS idx_trade_pair_timestamp ON trade_data (pair, timestamp DESC);
-          
-          -- Table article_data
-          CREATE TABLE IF NOT EXISTS article_data (
-              timestamp TIMESTAMPTZ NOT NULL,
-              article_id VARCHAR(255) NOT NULL,
-              title TEXT NOT NULL,
-              url TEXT NOT NULL,
-              website VARCHAR(100),
-              summary TEXT,
-              cryptocurrencies_mentioned TEXT[],
-              sentiment_score DOUBLE PRECISION,
-              sentiment_label VARCHAR(20)
-          );
+          CREATE TABLE IF NOT EXISTS article_data (timestamp TIMESTAMPTZ NOT NULL, article_id VARCHAR(255) NOT NULL, title TEXT NOT NULL, url TEXT NOT NULL, website VARCHAR(100), summary TEXT, cryptocurrencies_mentioned TEXT[], sentiment_score DOUBLE PRECISION, sentiment_label VARCHAR(20));
           SELECT create_hypertable('article_data', 'timestamp', if_not_exists => TRUE);
-          
-          -- Table alert_data
-          CREATE TABLE IF NOT EXISTS alert_data (
-              timestamp TIMESTAMPTZ NOT NULL,
-              pair VARCHAR(20) NOT NULL,
-              last_price DOUBLE PRECISION NOT NULL,
-              change_percent DOUBLE PRECISION NOT NULL,
-              threshold DOUBLE PRECISION NOT NULL,
-              alert_type VARCHAR(20) NOT NULL
-          );
+          CREATE TABLE IF NOT EXISTS alert_data (timestamp TIMESTAMPTZ NOT NULL, pair VARCHAR(20) NOT NULL, last_price DOUBLE PRECISION NOT NULL, change_percent DOUBLE PRECISION NOT NULL, threshold DOUBLE PRECISION NOT NULL, alert_type VARCHAR(20) NOT NULL);
           SELECT create_hypertable('alert_data', 'timestamp', if_not_exists => TRUE);
-          
-          -- Table sentiment_data
-          CREATE TABLE IF NOT EXISTS sentiment_data (
-              timestamp TIMESTAMPTZ NOT NULL,
-              crypto_symbol VARCHAR(10) NOT NULL,
-              sentiment_score DOUBLE PRECISION NOT NULL,
-              sentiment_label VARCHAR(20) NOT NULL,
-              source VARCHAR(100) NOT NULL,
-              confidence DOUBLE PRECISION
-          );
+          CREATE TABLE IF NOT EXISTS sentiment_data (timestamp TIMESTAMPTZ NOT NULL, crypto_symbol VARCHAR(10) NOT NULL, sentiment_score DOUBLE PRECISION NOT NULL, sentiment_label VARCHAR(20) NOT NULL, source VARCHAR(100) NOT NULL, confidence DOUBLE PRECISION);
           SELECT create_hypertable('sentiment_data', 'timestamp', if_not_exists => TRUE);
-          
-          -- Table prediction_data
-          CREATE TABLE IF NOT EXISTS prediction_data (
-              timestamp TIMESTAMPTZ NOT NULL,
-              crypto_symbol VARCHAR(10) NOT NULL,
-              predicted_price DOUBLE PRECISION NOT NULL,
-              actual_price DOUBLE PRECISION,
-              model_name VARCHAR(50) NOT NULL,
-              confidence_interval_low DOUBLE PRECISION,
-              confidence_interval_high DOUBLE PRECISION
-          );
+          CREATE TABLE IF NOT EXISTS prediction_data (timestamp TIMESTAMPTZ NOT NULL, crypto_symbol VARCHAR(10) NOT NULL, predicted_price DOUBLE PRECISION NOT NULL, actual_price DOUBLE PRECISION, model_name VARCHAR(50) NOT NULL, confidence_interval_low DOUBLE PRECISION, confidence_interval_high DOUBLE PRECISION);
           SELECT create_hypertable('prediction_data', 'timestamp', if_not_exists => TRUE);
-          
-          -- Politiques de rétention (90 jours)
-          SELECT add_retention_policy('ticker_data', INTERVAL '90 days', if_not_exists => TRUE);
-          SELECT add_retention_policy('trade_data', INTERVAL '90 days', if_not_exists => TRUE);
-          SELECT add_retention_policy('article_data', INTERVAL '90 days', if_not_exists => TRUE);
-          SELECT add_retention_policy('alert_data', INTERVAL '90 days', if_not_exists => TRUE);
-          SELECT add_retention_policy('sentiment_data', INTERVAL '90 days', if_not_exists => TRUE);
-          SELECT add_retention_policy('prediction_data', INTERVAL '90 days', if_not_exists => TRUE);
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
 
   # Redis pour Django Channels (optionnel)
   redis:
