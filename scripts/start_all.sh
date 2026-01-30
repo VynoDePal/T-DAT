@@ -78,7 +78,7 @@ log_info "Création des topics Kafka..."
 
 # 3. Initialiser la base de données TimescaleDB
 log_info "Initialisation de TimescaleDB..."
-docker exec -i crypto_viz_timescaledb psql -U postgres -d crypto_viz_ts < "$PROJECT_DIR/database/timescaledb_setup.sql" 2>/dev/null || log_warn "Tables déjà créées"
+docker exec -i t-dat-timescaledb-1 psql -U postgres -d crypto_viz_ts < "$PROJECT_DIR/database/timescaledb_setup.sql" 2>/dev/null || log_warn "Tables déjà créées"
 
 # 4. Backend Django déjà démarré par Docker Compose
 log_info "✓ Backend Django démarré via Docker Compose"
@@ -139,10 +139,10 @@ echo ""
 echo "Logs:"
 echo "  - Spark Ingest:    tail -f logs/spark_ingestion.log"
 echo "  - Spark Analytics: tail -f logs/spark_analytics.log"
-echo "  - Docker:          docker logs crypto_viz_kafka"
+echo "  - Docker:          docker logs t-dat-kafka-1"
 echo ""
 echo "Commandes utiles:"
 echo "  - Arrêter tout:     ./scripts/stop_all.sh"
-echo "  - Topics Kafka:     docker exec crypto_viz_kafka kafka-topics --bootstrap-server kafka:29092 --list"
+echo "  - Topics Kafka:     docker exec t-dat-kafka-1 kafka-topics --bootstrap-server kafka:29092 --list"
 echo "  - Containers:       docker ps"
 echo ""

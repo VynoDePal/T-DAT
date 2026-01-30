@@ -22,7 +22,7 @@ MAX_RETRIES=30
 RETRY_COUNT=0
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if docker exec crypto_viz_kafka kafka-broker-api-versions --bootstrap-server kafka:29092 &> /dev/null; then
+    if docker exec t-dat-kafka-1 kafka-broker-api-versions --bootstrap-server kafka:29092 &> /dev/null; then
         echo -e "${GREEN}✓${NC} Kafka est prêt!"
         break
     fi
@@ -55,7 +55,7 @@ create_optimized_topic() {
     
     echo -e "${YELLOW}[INFO]${NC} Création du topic optimisé: $TOPIC"
     
-    docker exec crypto_viz_kafka kafka-topics \
+    docker exec t-dat-kafka-1 kafka-topics \
         --bootstrap-server kafka:29092 \
         --create \
         --topic "$TOPIC" \
@@ -98,7 +98,7 @@ echo ""
 
 # Lister tous les topics
 echo -e "${YELLOW}[INFO]${NC} Topics disponibles:"
-docker exec crypto_viz_kafka kafka-topics --bootstrap-server kafka:29092 --list
+docker exec t-dat-kafka-1 kafka-topics --bootstrap-server kafka:29092 --list
 
 echo ""
 echo -e "${GREEN}✓✓✓${NC} Tous les topics Kafka sont prêts!"

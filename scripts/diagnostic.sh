@@ -96,13 +96,13 @@ if command -v docker &> /dev/null; then
         check_ok "Docker daemon en cours d'exécution"
         
         # Vérifier les conteneurs CRYPTO VIZ
-        if docker ps | grep -q crypto_viz_timescaledb; then
+        if docker ps | grep -q t-dat-timescaledb-1; then
             check_ok "TimescaleDB conteneur actif"
         else
             check_warn "TimescaleDB conteneur non trouvé"
         fi
         
-        if docker ps | grep -q crypto_viz_redis; then
+        if docker ps | grep -q t-dat-redis-1; then
             check_ok "Redis conteneur actif"
         else
             check_warn "Redis conteneur non trouvé"
@@ -192,8 +192,8 @@ fi
 
 # 11. Vérifier TimescaleDB
 section "TimescaleDB"
-if docker ps | grep -q crypto_viz_timescaledb; then
-    if docker exec crypto_viz_timescaledb pg_isready -U postgres &>/dev/null; then
+if docker ps | grep -q t-dat-timescaledb-1; then
+    if docker exec t-dat-timescaledb-1 pg_isready -U postgres &>/dev/null; then
         check_ok "TimescaleDB prête à accepter des connexions"
     else
         check_warn "TimescaleDB en cours de démarrage"
