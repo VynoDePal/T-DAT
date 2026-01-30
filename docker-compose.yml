@@ -2,12 +2,16 @@ services:
   # Zookeeper pour Kafka
   zookeeper:
     image: confluentinc/cp-zookeeper:7.7.0
+    ports:
+      - "7072:7072"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-      KAFKA_HEAP_OPTS: "-Xmx512M -Xms512M"
+      KAFKA_OPTS: "-Xmx512M -Xms512M -javaagent:/usr/share/jmx_exporter/jmx_prometheus_javaagent.jar=7072:/usr/share/jmx_exporter/zookeeper.yml"
+    mem_limit: 768m
     volumes:
       - zookeeper_data:/var/lib/zookeeper/data
+      - ./monitoring/jmx-exporter:/usr/share/jmx_exporter:ro
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "2181"]
       interval: 10s
@@ -44,18 +48,23 @@ services:
       KAFKA_SOCKET_RECEIVE_BUFFER_BYTES: 102400
       KAFKA_SOCKET_REQUEST_MAX_BYTES: 104857600
       KAFKA_HEAP_OPTS: "-Xmx1G -Xms1G"
+      # JMX Configuration pour monitoring
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: kafka
+      KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=kafka -Dcom.sun.management.jmxremote.rmi.port=9101"
+    mem_limit: 1.5g
     volumes:
       - kafka_data:/var/lib/kafka/data
+      - ./monitoring/jmx-exporter:/usr/share/jmx_exporter:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z localhost 29092 || exit 1"]
-      interval: 15s
-      timeout: 10s
-      retries: 20
-      start_period: 60s
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   # TimescaleDB pour les séries temporelles
   timescaledb:
-    image: timescale/timescaledb:latest-pg16
+    image: timescale/timescaledb:latest-pg18
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-crypto_viz_ts}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -64,12 +73,12 @@ services:
       - "15432:5432"
     volumes:
       - timescale_data:/var/lib/postgresql/data
+      - ./database/timescaledb_setup.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
-      retries: 10
-      start_period: 30s
+      retries: 5
 
   # Redis pour Django Channels (optionnel)
   redis:
@@ -83,26 +92,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-  # Service d'initialisation Kafka (création des topics)
-  kafka-init:
-    image: confluentinc/cp-kafka:7.7.0
-    depends_on:
-      kafka:
-        condition: service_healthy
-    command: >
-      bash -c "
-        echo 'Attente de Kafka...' &&
-        sleep 10 &&
-        kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic crypto_tickers --partitions 3 --replication-factor 1 &&
-        kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic crypto_trades --partitions 3 --replication-factor 1 &&
-        kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic crypto_articles --partitions 3 --replication-factor 1 &&
-        kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic crypto_alerts --partitions 3 --replication-factor 1 &&
-        kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic crypto_sentiment --partitions 3 --replication-factor 1 &&
-        kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic crypto_predictions --partitions 3 --replication-factor 1 &&
-        echo 'Topics Kafka créés avec succès!'
-      "
-    restart: "no"
 
   # Backend Django
   django:
@@ -126,6 +115,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
+      - ./crypto_viz_backend:/app
       - static_data:/app/staticfiles
     depends_on:
       kafka:
@@ -135,9 +125,96 @@ services:
       redis:
         condition: service_healthy
 
+  # Prometheus pour monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+    restart: unless-stopped
+
+  # Grafana pour visualisation
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # Kafka Exporter pour métriques consommateurs
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest
+    ports:
+      - "9308:9308"
+    command:
+      - '--kafka.server=kafka:29092'
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Node Exporter pour métriques système
+  node-exporter:
+    image: prom/node-exporter:latest
+    exclude_from_hc: true
+    ports:
+      - "9100:9100"
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    restart: unless-stopped
+
+  # Redis Exporter pour métriques Redis
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    ports:
+      - "9121:9121"
+    environment:
+      - REDIS_ADDR=redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Postgres Exporter pour métriques TimescaleDB
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    ports:
+      - "9187:9187"
+    environment:
+      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@timescaledb:5432/${POSTGRES_DB:-crypto_viz_ts}?sslmode=disable
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   zookeeper_data:
   kafka_data:
   timescale_data:
   redis_data:
   static_data:
+  prometheus_data:
+  grafana_data:
