@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS article_data (
     url TEXT NOT NULL,
     website VARCHAR(100),
     summary TEXT,
-    cryptocurrencies_mentioned TEXT[], -- Array de cryptos
+    cryptocurrencies_mentioned TEXT[],
     sentiment_score DOUBLE PRECISION,
     sentiment_label VARCHAR(20)
 );

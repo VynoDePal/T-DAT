@@ -75,7 +75,7 @@ def on_error(ws, error):
 
 def on_close(ws, close_status_code, close_msg):
     """Gestion de la fermeture WebSocket."""
-    print(f"🔌 WebSocket closed: {close_status_code} - {close_msg}")
+    print(f"WebSocket closed: {close_status_code} - {close_msg}")
 
 def on_open(ws):
     """Souscription aux canaux Kraken au démarrage."""
@@ -192,11 +192,11 @@ def periodic_flush():
         try:
             producer.flush()
         except Exception as e:
-            print(f"⚠️  Flush error: {e}")
+            print(f" Flush error: {e}")
 
 if __name__ == "__main__":
     print("=" * 80)
-    print("🚀 Kraken WebSocket → Kafka Producer")
+    print("Kraken WebSocket → Kafka Producer")
     print("=" * 80)
     print(f"Kafka: {KAFKA_SERVERS}")
     print(f"Topics: rawticker, rawtrade, rawalert")
@@ -217,5 +217,5 @@ if __name__ == "__main__":
         on_close=on_close
     )
     
-    print("🔌 Connexion au WebSocket Kraken...")
+    print("Connexion au WebSocket Kraken...")
     ws.run_forever()

@@ -1,4 +1,4 @@
-# 🚀 Quick Start - Monitoring & Optimisations
+# Quick Start - Monitoring & Optimisations
 
 Guide de démarrage rapide pour la nouvelle stack de monitoring.
 
@@ -60,9 +60,9 @@ docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
 ---
 
-## 🎯 Accès aux Interfaces
+## Accès aux Interfaces
 
-### **Grafana** 🎨
+### **Grafana**
 - URL: http://localhost:3000
 - Login: `admin`
 - Password: `admin`
@@ -78,7 +78,7 @@ docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
    - **11835**: Redis Dashboard
    - **9628**: PostgreSQL Database
 
-### **Prometheus** 📊
+### **Prometheus**
 - URL: http://localhost:9090
 - Status/Targets: http://localhost:9090/targets
 - Alerts: http://localhost:9090/alerts
@@ -92,17 +92,17 @@ docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 - postgres-exporter
 - prometheus
 
-### **Django API** 🌐
+### **Django API**
 - URL: http://localhost:8000/api/v1/
 - Health check: http://localhost:8000/api/v1/health/
 
-### **Health Check Metrics** 🏥
+### **Health Check Metrics**
 - URL: http://localhost:9999/metrics
 - Format: Prometheus metrics
 
 ---
 
-## 📈 Premiers Checks
+## Premiers Checks
 
 ### **1. Vérifier Kafka**
 
@@ -133,8 +133,8 @@ docker exec crypto_viz_kafka kafka-topics \
 tail -20 logs/kraken_producer.log
 
 # Devrait afficher des messages comme:
-# 📊 XBT/USD | Last: $89,800.10 | Change: 0.0% | Vol: 2,229.43
-# 💱 🟢 ETH/USD | $3,004.41 | Vol: 0.1963
+#  XBT/USD | Last: $89,800.10 | Change: 0.0% | Vol: 2,229.43
+#  ETH/USD | $3,004.41 | Vol: 0.1963
 
 # Article scraper logs
 tail -20 logs/article_scraper.log
@@ -169,7 +169,7 @@ docker exec -it crypto_viz_redis redis-cli
 
 ---
 
-## 🎨 Grafana: Créer votre Premier Dashboard
+## Grafana: Créer votre Premier Dashboard
 
 ### **Dashboard Crypto Viz Custom**
 
@@ -203,7 +203,7 @@ rate(redis_keyspace_hits_total[5m]) /
 
 ---
 
-## 🚨 Alertes Configurées
+## Alertes Configurées
 
 Les alertes suivantes sont actives (voir `monitoring/prometheus/alerts/kafka-alerts.yml`):
 
@@ -213,7 +213,7 @@ Les alertes suivantes sont actives (voir `monitoring/prometheus/alerts/kafka-ale
 - Kraken producer down (> 2 min)
 - TimescaleDB down (> 1 min)
 
-### **Warnings** ⚠️
+### **Warnings**
 - Under-replicated partitions (> 5 min)
 - High consumer lag (> 10k, 10 min)
 - High ISR shrink rate
@@ -227,7 +227,7 @@ http://localhost:9090/alerts
 
 ---
 
-## 📊 Métriques à Surveiller
+## Métriques à Surveiller
 
 ### **Santé Générale**
 
@@ -271,7 +271,7 @@ redis_connected_clients
 
 ---
 
-## 🔧 Commandes Utiles
+## Commandes Utiles
 
 ### **Restart Services**
 
@@ -317,44 +317,3 @@ curl -s http://localhost:9999/metrics | grep crypto_viz
 # Redis stats
 docker exec crypto_viz_redis redis-cli INFO stats
 ```
-
----
-
-## ✅ Checklist de Validation
-
-Cochez chaque élément pour confirmer que tout fonctionne:
-
-- [ ] Tous les containers Docker sont UP
-- [ ] Prometheus accessible et tous les targets UP
-- [ ] Grafana accessible avec login admin
-- [ ] Kafka topics créés (4 topics)
-- [ ] Producteurs actifs (Kraken + Article Scraper)
-- [ ] Health check monitor actif (port 9999)
-- [ ] Données arrivent dans TimescaleDB
-- [ ] Cache Redis fonctionnel
-- [ ] Django API répond (http://localhost:8000/api/v1/health/)
-- [ ] Pas d'alertes critiques dans Prometheus
-
----
-
-## 🎉 Prochaines Étapes
-
-Une fois tout validé:
-
-1. **Importer dashboards Grafana** (IDs: 11962, 1860, 11835, 9628)
-2. **Configurer Alertmanager** pour notifications Slack/Email
-3. **Optimiser cache timeouts** selon votre usage
-4. **Tester en charge** avec vos use cases réels
-5. **Backup** prometheus_data et grafana_data volumes
-
----
-
-## 📚 Documentation Complète
-
-- **MONITORING_AND_OPTIMIZATIONS.md** - Guide détaillé
-- **DATA_PIPELINE_COMPLETE.md** - Architecture pipeline
-- **KAFKA_LOCAL_SETUP.md** - Configuration Kafka
-
----
-
-**🚀 Monitoring stack opérationnel - Bon monitoring !**

@@ -5,7 +5,7 @@
 set -e
 
 echo "========================================="
-echo "🚀 Démarrage des Producteurs Kafka"
+echo " Démarrage des Producteurs Kafka"
 echo "========================================="
 echo ""
 
@@ -47,7 +47,7 @@ if ! nc -zv localhost 9092 2>&1 | grep -q "succeeded"; then
     exit 1
 fi
 
-log_info "✅ Kafka est accessible"
+log_info "Kafka est accessible"
 echo ""
 
 # Démarrer le producteur Kraken
@@ -55,7 +55,7 @@ log_info "Démarrage du producteur Kraken (WebSocket)..."
 nohup python3 -u kraken_producer.py > ../logs/kraken_producer.log 2>&1 &
 KRAKEN_PID=$!
 echo $KRAKEN_PID > ../logs/kraken_producer.pid
-log_info "✅ Producteur Kraken démarré (PID: $KRAKEN_PID)"
+log_info "Producteur Kraken démarré (PID: $KRAKEN_PID)"
 
 # Attendre un peu pour la stabilisation
 sleep 2
@@ -65,11 +65,11 @@ log_info "Démarrage du scraper d'articles crypto..."
 nohup python3 -u article_scraper.py > ../logs/article_scraper.log 2>&1 &
 ARTICLE_PID=$!
 echo $ARTICLE_PID > ../logs/article_scraper.pid
-log_info "✅ Scraper d'articles démarré (PID: $ARTICLE_PID)"
+log_info "Scraper d'articles démarré (PID: $ARTICLE_PID)"
 
 echo ""
 echo "========================================="
-echo -e "${GREEN}✓ Tous les producteurs sont démarrés!${NC}"
+echo -e "${GREEN}Tous les producteurs sont démarrés!${NC}"
 echo "========================================="
 echo ""
 echo "Producteurs actifs:"

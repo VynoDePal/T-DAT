@@ -75,11 +75,3 @@ Django Channels permet à Django de gérer les protocoles non-HTTP, y compris le
 2.  **Implémentation Spark Sink :** Configurer le job Spark Structured Streaming pour écrire les résultats dans la DB-TS.
 3.  **Développement de l'API Django :** Créer les modèles Django pour les métadonnées (avec SQLite) et les vues DRF pour interroger la DB-TS.
 
-***
-
-### Références
-
-[1] Stack Overflow. *Django and the limits of SQLite*.
-[2] Reddit. *Is it okay to use Sqlite in production?*.
-[3] Heroku Blog. *Django Channels: How to Build Real-Time Web Apps With WebSockets*.
-[4] Medium. *Building a Real-time Feedback System with Django, Kafka, Spark...*.

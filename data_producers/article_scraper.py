@@ -42,7 +42,7 @@ SCRAPE_INTERVAL = 300  # 5 minutes
 def delivery_report(err, msg):
     """Callback pour les confirmations de livraison."""
     if err is not None:
-        print(f'❌ Message delivery failed: {err}')
+        print(f'Message delivery failed: {err}')
 
 def extract_article_content(url, timeout=10):
     """Tente d'extraire le contenu principal de l'article."""
@@ -72,12 +72,12 @@ def extract_article_content(url, timeout=10):
         
         return content[:2000] if content else None
     except Exception as e:
-        print(f"⚠️  Erreur extraction contenu de {url}: {e}")
+        print(f"Erreur extraction contenu de {url}: {e}")
         return None
 
 def scrape_feed(source_name, feed_url):
     """Scrape un flux RSS et envoie les nouveaux articles vers Kafka."""
-    print(f"📰 Scraping {source_name}...")
+    print(f"Scraping {source_name}...")
     
     try:
         feed = feedparser.parse(feed_url)
@@ -136,19 +136,19 @@ def scrape_feed(source_name, feed_url):
                 )
                 producer.poll(0)
                 new_articles_count += 1
-                print(f"  ✅ [{source_name}] {title[:60]}...")
+                print(f"[{source_name}] {title[:60]}...")
             except Exception as e:
-                print(f"  ❌ Kafka error: {e}")
+                print(f"Kafka error: {e}")
         
         producer.flush()
         
         if new_articles_count > 0:
-            print(f"  📊 {new_articles_count} nouveaux articles de {source_name}")
+            print(f"{new_articles_count} nouveaux articles de {source_name}")
         else:
-            print(f"  ℹ️  Aucun nouvel article de {source_name}")
+            print(f"Aucun nouvel article de {source_name}")
             
     except Exception as e:
-        print(f"❌ Erreur scraping {source_name}: {e}")
+        print(f"Erreur scraping {source_name}: {e}")
 
 def extract_crypto_tags(text):
     """Extrait les tags crypto du texte."""
@@ -170,11 +170,11 @@ def extract_crypto_tags(text):
 
 def main():
     print("=" * 80)
-    print("📰 Crypto Article Scraper → Kafka Producer")
+    print("Crypto Article Scraper → Kafka Producer")
     print("=" * 80)
-    print(f"📡 Kafka: {KAFKA_SERVERS}")
-    print(f"📊 Topic: rawarticle")
-    print(f"🌐 Sources RSS: {len(RSS_FEEDS)}")
+    print(f"Kafka: {KAFKA_SERVERS}")
+    print(f"Topic: rawarticle")
+    print(f"Sources RSS: {len(RSS_FEEDS)}")
     for source in RSS_FEEDS.keys():
         print(f"   - {source}")
     print(f"⏱️  Intervalle: {SCRAPE_INTERVAL}s ({SCRAPE_INTERVAL//60} minutes)")
@@ -193,8 +193,8 @@ def main():
             scrape_feed(source_name, feed_url)
             time.sleep(2)  # Pause entre chaque source
         
-        print(f"\n✅ Cycle {iteration} terminé. Articles vus: {len(seen_articles)}")
-        print(f"⏳ Prochain scraping dans {SCRAPE_INTERVAL}s...\n")
+        print(f"\nCycle {iteration} terminé. Articles vus: {len(seen_articles)}")
+        print(f"Prochain scraping dans {SCRAPE_INTERVAL}s...\n")
         
         time.sleep(SCRAPE_INTERVAL)
 
@@ -202,6 +202,6 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\n🛑 Arrêt du scraper...")
+        print("\n\nArrêt du scraper...")
         producer.close()
-        print("✅ Producteur Kafka fermé proprement")
+        print("Producteur Kafka fermé proprement")

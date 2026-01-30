@@ -1,4 +1,4 @@
-# 🚀 CRYPTO VIZ - Plateforme de Visualisation Crypto Temps Réel
+# CRYPTO VIZ - Plateforme de Visualisation Crypto Temps Réel
 
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://python.org)
 [![Django](https://img.shields.io/badge/Django-5.0-green.svg)](https://djangoproject.com)

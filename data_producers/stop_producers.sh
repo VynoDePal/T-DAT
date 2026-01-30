@@ -5,7 +5,7 @@
 set -e
 
 echo "========================================="
-echo "🛑 Arrêt des Producteurs Kafka"
+echo "Arrêt des Producteurs Kafka"
 echo "========================================="
 echo ""
 

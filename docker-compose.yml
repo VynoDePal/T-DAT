@@ -173,7 +173,6 @@ services:
   # Node Exporter pour métriques système
   node-exporter:
     image: prom/node-exporter:latest
-    exclude_from_hc: true
     ports:
       - "9100:9100"
     command:

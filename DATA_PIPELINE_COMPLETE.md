@@ -1,4 +1,4 @@
-# 🎉 Pipeline de Données Crypto - Opérationnel
+# Pipeline de Données Crypto - Opérationnel
 
 ## ✅ Statut: **PRODUCTION READY**
 
@@ -6,7 +6,7 @@ Le pipeline complet de données crypto est maintenant **100% fonctionnel** et tr
 
 ---
 
-## 📊 Statistiques Actuelles
+## Statistiques Actuelles
 
 **Données en temps réel dans TimescaleDB:**
 - **Tickers (prix)**: 176+ entrées et augmentation constante
@@ -21,7 +21,7 @@ Le pipeline complet de données crypto est maintenant **100% fonctionnel** et tr
 
 ---
 
-## 🏗️ Architecture Complète
+## Architecture Complète
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -30,12 +30,12 @@ Le pipeline complet de données crypto est maintenant **100% fonctionnel** et tr
 
 [PRODUCTEURS DE DONNÉES]
    │
-   ├─ 📡 Kraken WebSocket
+   ├─  Kraken WebSocket
    │    └─ Connexion WSS à Kraken
    │    └─ 8 paires crypto (BTC, ETH, SOL, ADA, etc.)
    │    └─ Données ticker + trades en temps réel
    │
-   ├─ 📰 Article Scraper
+   ├─  Article Scraper
    │    └─ 5 sources RSS (CoinDesk, Cointelegraph, etc.)
    │    └─ Scraping toutes les 5 minutes
    │    └─ Extraction contenu + tags crypto
@@ -79,7 +79,7 @@ Le pipeline complet de données crypto est maintenant **100% fonctionnel** et tr
 
 ---
 
-## 🚀 Démarrage du Système
+## Démarrage du Système
 
 ### **1. Démarrage Complet (Tout en Une Fois)**
 
@@ -115,7 +115,7 @@ cd /home/kevyn-odjo/Documents/T-DAT
 
 ---
 
-## 📈 Vérification du Système
+## Vérification du Système
 
 ### **Vérifier Kafka**
 
@@ -201,7 +201,7 @@ curl http://localhost:8000/api/v1/config/crypto/
 
 ---
 
-## 📦 Composants Créés
+## Composants Créés
 
 ### **1. Producteurs de Données**
 
@@ -254,7 +254,7 @@ curl http://localhost:8000/api/v1/config/crypto/
 
 ---
 
-## 🔧 Résolution de Problèmes
+## Résolution de Problèmes
 
 ### **Kafka ne démarre pas**
 
@@ -302,7 +302,7 @@ rm -rf venv
 
 ---
 
-## 📊 Exemple de Données
+## Exemple de Données
 
 ### **Ticker Data (Prix)**
 
@@ -347,7 +347,7 @@ rm -rf venv
 
 ---
 
-## 🎯 Prochaines Étapes Recommandées
+## Prochaines Étapes Recommandées
 
 1. **Monitoring & Alertes**
    - Ajouter Prometheus/Grafana
@@ -372,32 +372,9 @@ rm -rf venv
 
 ---
 
-## 📚 Documentation Associée
+## Documentation Associée
 
 - `KAFKA_LOCAL_SETUP.md` - Configuration Kafka détaillée
 - `INSTALLATION.md` - Installation initiale
 - `QUICKSTART.md` - Démarrage rapide
 - `TROUBLESHOOTING.md` - Résolution de problèmes
-
----
-
-## ✨ Crédits & Inspirations
-
-- **T-DAT-1** par Izzoudine - https://github.com/Izzoudine/T-DAT-1
-  - Approche Kafka locale
-  - Producteurs WebSocket
-  - Gestion automatique des topics
-
-- **Technologies**
-  - Apache Kafka + Zookeeper
-  - Apache Spark Structured Streaming
-  - TimescaleDB (PostgreSQL)
-  - Django REST Framework
-  - Kraken WebSocket API
-
----
-
-**Date de complétion**: 20 janvier 2026  
-**Statut**: ✅ **Production Ready**  
-**Pipeline**: **Kafka → Spark → TimescaleDB → Django API**  
-**Données en temps réel**: **OUI**

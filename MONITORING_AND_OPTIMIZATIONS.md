@@ -1,11 +1,8 @@
-# 🚀 Monitoring & Optimisations - Guide Complet
-
-**Date**: 20 janvier 2026  
-**Version**: 2.0 - Production Enhanced
+# Monitoring & Optimisations - Guide Complet
 
 ---
 
-## 📋 Table des Matières
+## Table des Matières
 
 1. [Vue d'ensemble](#vue-densemble)
 2. [Monitoring Stack](#monitoring-stack)
@@ -17,7 +14,7 @@
 
 ---
 
-## 🎯 Vue d'ensemble
+## Vue d'ensemble
 
 Ce document couvre toutes les améliorations de monitoring, alertes et optimisations implémentées dans le pipeline Crypto Viz.
 
@@ -52,7 +49,7 @@ Ce document couvre toutes les améliorations de monitoring, alertes et optimisat
 
 ---
 
-## 📊 Monitoring Stack
+## Monitoring Stack
 
 ### **Architecture**
 
@@ -173,7 +170,7 @@ buffer.memory: 64MB
 
 ---
 
-## 🗄️ Cache Redis
+## Cache Redis
 
 ### **Configuration Django**
 
@@ -244,7 +241,7 @@ stats = get_cache_stats()
 
 ---
 
-## 🚀 Utilisation
+## Utilisation
 
 ### **Démarrage Complet avec Monitoring**
 
@@ -298,7 +295,7 @@ Dashboard → Import → Enter ID → Select Prometheus datasource
 
 ---
 
-## 📈 Métriques Importantes
+## Métriques Importantes
 
 ### **Kafka Broker**
 
@@ -463,7 +460,7 @@ spark = SparkSession.builder \
 
 ---
 
-## 📊 Benchmark & Résultats
+## Benchmark & Résultats
 
 ### **Avant Optimisations**
 
@@ -487,7 +484,7 @@ Cache hit rate: 80-90%
 
 ---
 
-## 🎯 Best Practices
+##  Best Practices
 
 ### **Monitoring**
 
@@ -523,38 +520,11 @@ Cache hit rate: 80-90%
 
 ---
 
-## 📝 Prochaines Étapes
 
-### **Court Terme**
 
-- [ ] Importer dashboards Grafana recommandés
-- [ ] Configurer Alertmanager avec Slack
-- [ ] Tester failover Kafka
-- [ ] Benchmark charge réelle
-
-### **Moyen Terme**
-
-- [ ] Kafka multi-brokers (3 nodes)
-- [ ] Redis Sentinel (HA)
-- [ ] Prometheus HA
-- [ ] Backup automatique métriques
-
-### **Long Terme**
-
-- [ ] Kubernetes deployment
-- [ ] Distributed tracing (Jaeger)
-- [ ] Log aggregation (ELK)
-- [ ] APM (Application Performance Monitoring)
-
----
-
-## 🔗 Ressources
+## Ressources
 
 - [Kafka Performance Tuning](https://www.redpanda.com/guides/kafka-performance-kafka-performance-tuning)
 - [Prometheus Best Practices](https://prometheus.io/docs/practices/)
 - [Django Redis Cache](https://github.com/jazzband/django-redis)
 - [Grafana Dashboards](https://grafana.com/grafana/dashboards/)
-
----
-
-**🎉 Pipeline optimisé et monitoré - Prêt pour la production !**
