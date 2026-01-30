@@ -64,23 +64,6 @@ services:
       - "15432:5432"
     volumes:
       - timescale_data:/var/lib/postgresql/data
-      - type: bind
-        source: ./init-timescale.sql
-        target: /docker-entrypoint-initdb.d/init.sql
-        content: |
-          CREATE EXTENSION IF NOT EXISTS timescaledb;
-          CREATE TABLE IF NOT EXISTS ticker_data (timestamp TIMESTAMPTZ NOT NULL, pair VARCHAR(20) NOT NULL, last DOUBLE PRECISION NOT NULL, bid DOUBLE PRECISION, ask DOUBLE PRECISION, volume_24h DOUBLE PRECISION);
-          SELECT create_hypertable('ticker_data', 'timestamp', if_not_exists => TRUE);
-          CREATE TABLE IF NOT EXISTS trade_data (timestamp TIMESTAMPTZ NOT NULL, pair VARCHAR(20) NOT NULL, price DOUBLE PRECISION NOT NULL, volume DOUBLE PRECISION NOT NULL, side VARCHAR(1) NOT NULL);
-          SELECT create_hypertable('trade_data', 'timestamp', if_not_exists => TRUE);
-          CREATE TABLE IF NOT EXISTS article_data (timestamp TIMESTAMPTZ NOT NULL, article_id VARCHAR(255) NOT NULL, title TEXT NOT NULL, url TEXT NOT NULL, website VARCHAR(100), summary TEXT, cryptocurrencies_mentioned TEXT[], sentiment_score DOUBLE PRECISION, sentiment_label VARCHAR(20));
-          SELECT create_hypertable('article_data', 'timestamp', if_not_exists => TRUE);
-          CREATE TABLE IF NOT EXISTS alert_data (timestamp TIMESTAMPTZ NOT NULL, pair VARCHAR(20) NOT NULL, last_price DOUBLE PRECISION NOT NULL, change_percent DOUBLE PRECISION NOT NULL, threshold DOUBLE PRECISION NOT NULL, alert_type VARCHAR(20) NOT NULL);
-          SELECT create_hypertable('alert_data', 'timestamp', if_not_exists => TRUE);
-          CREATE TABLE IF NOT EXISTS sentiment_data (timestamp TIMESTAMPTZ NOT NULL, crypto_symbol VARCHAR(10) NOT NULL, sentiment_score DOUBLE PRECISION NOT NULL, sentiment_label VARCHAR(20) NOT NULL, source VARCHAR(100) NOT NULL, confidence DOUBLE PRECISION);
-          SELECT create_hypertable('sentiment_data', 'timestamp', if_not_exists => TRUE);
-          CREATE TABLE IF NOT EXISTS prediction_data (timestamp TIMESTAMPTZ NOT NULL, crypto_symbol VARCHAR(10) NOT NULL, predicted_price DOUBLE PRECISION NOT NULL, actual_price DOUBLE PRECISION, model_name VARCHAR(50) NOT NULL, confidence_interval_low DOUBLE PRECISION, confidence_interval_high DOUBLE PRECISION);
-          SELECT create_hypertable('prediction_data', 'timestamp', if_not_exists => TRUE);
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -104,7 +87,6 @@ services:
   # Service d'initialisation Kafka (création des topics)
   kafka-init:
     image: confluentinc/cp-kafka:7.7.0
-    exclude_from_hc: true
     depends_on:
       kafka:
         condition: service_healthy
