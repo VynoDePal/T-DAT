@@ -3,6 +3,7 @@
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://python.org)
 [![Django](https://img.shields.io/badge/Django-5.0-green.svg)](https://djangoproject.com)
 [![Spark](https://img.shields.io/badge/Apache%20Spark-3.5-orange.svg)](https://spark.apache.org)
+[![TimescaleDB](https://img.shields.io/badge/TimescaleDB-PG18-4E9A06.svg)](https://www.timescale.com)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Système complet de visualisation et d'analyse de crypto-monnaies en temps réel intégrant Django REST Framework, Apache Spark Streaming, TimescaleDB et un monitoring Prometheus/Grafana.
@@ -38,6 +39,7 @@ Système complet de visualisation et d'analyse de crypto-monnaies en temps réel
 | **Alertes Prix** | Notifications de variations significatives |
 | **Agrégation d'Articles** | Collecte et analyse automatique |
 | **Historique Complet** | 90 jours de données avec TimescaleDB |
+| **WebSocket Live** | Streaming temps réel via Django Channels |
 
 ---
 
@@ -330,6 +332,8 @@ open http://localhost:8000/api/docs/
 | **Trades** | `/api/v1/trade/{pair}/historique/` | GET | Historique transactions |
 | **Articles** | `/api/v1/article/historique/` | GET | Articles crypto |
 | **Alerts** | `/api/v1/alert/historique/` | GET | Alertes prix |
+| **WebSocket Live** | `/ws/live/{pair}/` | WS | Flux temps réel |
+| **WebSocket Global** | `/ws/global/` | WS | Alertes & actualités |
 | **Config** | `/api/v1/config/crypto/` | GET/POST | Config cryptos |
 | **Config** | `/api/v1/config/visualization/` | GET/POST | Config visualisation |
 
@@ -482,4 +486,71 @@ docker compose down
 
 # Reconstruire après modifications
 docker compose up -d --build
+```
+
+---
+
+## Prérequis Spark
+
+Les jobs Spark nécessitent les JARs suivants dans `spark_jobs/jars/`:
+
+| JAR | Description |
+|-----|-------------|
+| `spark-sql-kafka-0-10_2.12-3.5.0.jar` | Connecteur Kafka pour Spark |
+| `postgresql-42.7.1.jar` | Driver JDBC PostgreSQL |
+| `kafka-clients-3.5.1.jar` | Client Kafka |
+
+### Télécharger les JARs
+
+```bash
+./scripts/download_spark_jars.sh
+```
+
+Ou manuellement:
+```bash
+cd spark_jobs/jars
+wget https://repo1.maven.org/maven2/org/apache/spark/spark-sql-kafka-0-10_2.12/3.5.0/spark-sql-kafka-0-10_2.12-3.5.0.jar
+wget https://repo1.maven.org/maven2/org/postgresql/postgresql/42.7.1/postgresql-42.7.1.jar
+```
+
+---
+
+## Dépannage
+
+### Problèmes courants
+
+| Problème | Cause | Solution |
+|----------|-------|----------|
+| `Connection refused` Kafka | Kafka non démarré | Attendre 40s après `docker compose up` |
+| `NoClassDefFoundError` | JARs Spark manquants | Exécuter `download_spark_jars.sh` |
+| `psycopg2.OperationalError` | TimescaleDB non prête | Vérifier `docker ps` et ports |
+| Port 9092 occupé | Service Kafka local | Arrêter le service: `sudo systemctl stop kafka` |
+| Permission denied | Problème Docker | Ajouter user au groupe docker: `sudo usermod -aG docker $USER` |
+
+### Logs utiles
+
+```bash
+# Logs Spark
+tail -f logs/spark_ingestion.log
+tail -f logs/spark_analytics.log
+
+# Logs Kafka
+docker logs t-dat-kafka-1 -f
+
+# Logs Django
+docker logs t-dat-django-1 -f
+```
+
+### Réinitialisation complète
+
+```bash
+# Arrêter tout
+./scripts/stop_all.sh
+
+# Supprimer les données
+docker compose down -v
+rm -rf logs/*.log logs/*.pid
+
+# Relancer
+./scripts/start_all.sh
 ```
