@@ -88,8 +88,8 @@ DATABASES = {
         'NAME': os.environ.get('TIMESCALE_DB_NAME', 'crypto_viz_ts'),
         'USER': os.environ.get('TIMESCALE_DB_USER', 'postgres'),
         'PASSWORD': os.environ.get('TIMESCALE_DB_PASSWORD', 'password'),
-        'HOST': os.environ.get('TIMESCALE_DB_HOST', 'localhost'),
-        'PORT': os.environ.get('TIMESCALE_DB_PORT', '15432'),
+        'HOST': os.environ.get('TIMESCALE_DB_HOST', 'timescaledb'),
+        'PORT': os.environ.get('TIMESCALE_DB_PORT', '5432'),
     }
 }
 

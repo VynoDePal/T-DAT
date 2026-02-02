@@ -55,14 +55,15 @@ def read_kafka_stream(spark, topic):
         .format("kafka") \
         .option("kafka.bootstrap.servers", config.KAFKA_BOOTSTRAP_SERVERS) \
         .option("subscribe", topic) \
-        .option("startingOffsets", "latest") \
+        .option("startingOffsets", "earliest") \
         .load()
 
 
 def write_to_timescale(df, table_name, checkpoint_path):
     """Écrit un DataFrame dans TimescaleDB."""
     def write_batch(batch_df, batch_id):
-        if batch_df.count() > 0:
+        count = batch_df.count()
+        if count > 0:
             batch_df.write \
                 .format("jdbc") \
                 .option("url", config.TIMESCALE_JDBC_URL) \
@@ -72,10 +73,11 @@ def write_to_timescale(df, table_name, checkpoint_path):
                 .option("driver", "org.postgresql.Driver") \
                 .mode("append") \
                 .save()
-            print(f"Batch {batch_id}: {batch_df.count()} rows écrites dans {table_name}")
+            print(f"✅ Batch {batch_id}: {count} rows écrites dans {table_name}")
     
     return df.writeStream \
         .foreachBatch(write_batch) \
+        .outputMode("append") \
         .option("checkpointLocation", checkpoint_path) \
         .start()
 
@@ -128,10 +130,11 @@ def process_sentiment_from_articles(spark):
             col("avg_confidence").alias("confidence")
         )
     
+    # Utiliser un checkpoint séparé pour sentiment
     query = write_to_timescale(
         windowed_sentiment,
         "sentiment_data",
-        f"{config.CHECKPOINT_LOCATION}/sentiment"
+        f"/tmp/spark_checkpoints_sentiment/sentiment"
     )
     
     return query
@@ -187,7 +190,7 @@ def process_price_predictions(spark):
     query = write_to_timescale(
         prediction_df,
         "prediction_data",
-        f"{config.CHECKPOINT_LOCATION}/prediction"
+        f"/tmp/spark_checkpoints_prediction/prediction"
     )
     
     return query

@@ -64,8 +64,8 @@ check_and_free_port() {
 # Note: Les ports Docker sont mappés sur 15432 et 6380 pour éviter les conflits
 # Pas besoin de vérifier les ports car on utilise des ports alternatifs
 
-# 1. Démarrer Zookeeper, Kafka, TimescaleDB et Redis avec Docker
-log_info "Démarrage des services Docker (Zookeeper, Kafka, TimescaleDB, Redis, Monitoring)..."
+# 1. Démarrer Kafka, TimescaleDB et Redis avec Docker
+log_info "Démarrage des services Docker (Kafka, TimescaleDB, Redis, Monitoring)..."
 cd "$PROJECT_DIR"
 docker compose up -d --build
 
@@ -113,8 +113,7 @@ echo -e "${GREEN}✓ Tous les services sont démarrés!${NC}"
 echo "========================================="
 echo ""
 echo "Services Docker actifs:"
-echo "  - Zookeeper:          port 2181, 7072 (JMX)"
-echo "  - Kafka:              port 9092, 7071 (JMX)"
+echo "  - Kafka:              port 9092, 29092"
 echo "  - TimescaleDB:        port 15432"
 echo "  - Redis:              port 6380"
 echo "  - Django API:         port 8000"

@@ -157,7 +157,7 @@ class SentimentDataSerializer(serializers.Serializer):
         help_text='Horodatage de la mesure de sentiment (format ISO 8601 UTC)'
     )
     crypto_symbol = serializers.CharField(
-        max_length=10,
+        max_length=50,
         help_text='Symbole de la crypto-monnaie (ex: BTC, ETH, SOL)'
     )
     sentiment_score = serializers.FloatField(

@@ -44,7 +44,7 @@ if [ -f "logs/django.pid" ]; then
 fi
 
 # 3. Arrêter les conteneurs Docker
-log_info "Arrêt de tous les services Docker (Kafka, Zookeeper, TimescaleDB, Redis)..."
+log_info "Arrêt de tous les services Docker (Kafka, TimescaleDB, Redis)..."
 docker compose down
 
 echo ""

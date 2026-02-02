@@ -419,7 +419,7 @@ data.data.forEach(point => {
                 end_date = parse_datetime(end_date)
             
             data = timescale_client.get_sentiment_history(
-                crypto_symbol.upper(),
+                crypto_symbol,
                 period=period if not start_date else None,
                 start_date=start_date,
                 end_date=end_date
@@ -531,7 +531,7 @@ l'intervalle dans lequel le prix a ~68% de chances de se trouver (±1 écart-typ
                 end_date = parse_datetime(end_date)
             
             data = timescale_client.get_prediction_history(
-                crypto_symbol.upper(),
+                crypto_symbol,
                 period=period if not start_date else None,
                 start_date=start_date,
                 end_date=end_date
@@ -643,7 +643,7 @@ Le spread (ask - bid) indique la liquidité du marché:
                 end_date = parse_datetime(end_date)
             
             data = timescale_client.get_ticker_history(
-                pair.upper(),
+                pair,
                 period=period if not start_date else None,
                 start_date=start_date,
                 end_date=end_date
@@ -752,7 +752,7 @@ data.data.forEach(trade => {
                 end_date = parse_datetime(end_date)
             
             data = timescale_client.get_trade_history(
-                pair.upper(),
+                pair,
                 period=period if not start_date else None,
                 start_date=start_date,
                 end_date=end_date
@@ -872,7 +872,7 @@ Si non fourni, retourne tous les articles.
                 end_date = parse_datetime(end_date)
             
             data = timescale_client.get_article_history(
-                crypto_symbol=crypto_symbol.upper() if crypto_symbol else None,
+                crypto_symbol=crypto_symbol if crypto_symbol else None,
                 period=period if not start_date else None,
                 start_date=start_date,
                 end_date=end_date
@@ -993,7 +993,7 @@ const majorAlerts = data.data.filter(a => Math.abs(a.change_percent) > 5);
                 end_date = parse_datetime(end_date)
             
             data = timescale_client.get_alert_history(
-                pair=pair.upper() if pair else None,
+                pair=pair if pair else None,
                 period=period if not start_date else None,
                 start_date=start_date,
                 end_date=end_date

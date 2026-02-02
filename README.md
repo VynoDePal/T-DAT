@@ -260,7 +260,7 @@ nano .env
 docker compose up -d
 
 # Ou démarrer uniquement les services essentiels
-docker compose up -d timescaledb redis kafka zookeeper
+docker compose up -d timescaledb redis kafka
 ```
 
 ### 5. Configuration Backend Django

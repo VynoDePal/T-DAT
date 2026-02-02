@@ -94,7 +94,7 @@ CREATE INDEX IF NOT EXISTS idx_alert_type ON alert_data (alert_type, timestamp D
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS sentiment_data (
     timestamp TIMESTAMPTZ NOT NULL,
-    crypto_symbol VARCHAR(10) NOT NULL,
+    crypto_symbol VARCHAR(50) NOT NULL,
     sentiment_score DOUBLE PRECISION NOT NULL,
     sentiment_label VARCHAR(20) NOT NULL,
     source VARCHAR(100) NOT NULL,
@@ -114,7 +114,7 @@ CREATE INDEX IF NOT EXISTS idx_sentiment_label ON sentiment_data (sentiment_labe
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS prediction_data (
     timestamp TIMESTAMPTZ NOT NULL,
-    crypto_symbol VARCHAR(10) NOT NULL,
+    crypto_symbol VARCHAR(50) NOT NULL,
     predicted_price DOUBLE PRECISION NOT NULL,
     actual_price DOUBLE PRECISION,
     model_name VARCHAR(50) NOT NULL,

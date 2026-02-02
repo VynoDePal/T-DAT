@@ -242,7 +242,7 @@ class TimescaleDBClient:
         params = []
         
         if crypto_symbol:
-            query += " AND %s = ANY(cryptocurrencies_mentioned)"
+            query += " AND LOWER(%s) = ANY(ARRAY(SELECT LOWER(x) FROM unnest(cryptocurrencies_mentioned) AS x))"
             params.append(crypto_symbol)
         
         if start_date and end_date:

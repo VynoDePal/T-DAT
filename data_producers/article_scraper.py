@@ -12,6 +12,7 @@ import requests
 from confluent_kafka import Producer
 from datetime import datetime
 from bs4 import BeautifulSoup
+from textblob import TextBlob
 
 KAFKA_SERVERS = os.environ.get('KAFKA_SERVERS', 'localhost:9092')
 
@@ -114,16 +115,26 @@ def scrape_feed(source_name, feed_url):
             # Extraire le contenu complet (optionnel, peut être lent)
             content = extract_article_content(article_url, timeout=5) if article_url else None
             
-            # Payload pour Kafka
+            # Analyser le sentiment sur titre + résumé
+            sentiment_text = f"{title} {summary}"
+            sentiment = analyze_sentiment(sentiment_text)
+            
+            # Extraire les cryptos mentionnées
+            crypto_symbols = extract_crypto_tags(title + ' ' + summary)
+            
+            # Payload pour Kafka (compatible avec schéma Spark)
             payload = {
+                'id': article_url or str(time.time()),
                 'title': title,
                 'url': article_url,
-                'source': source_name,
+                'website': source_name,
                 'summary': summary,
-                'content': content,
+                'content': {'text': content} if content else {},
                 'published_at': pub_time,
                 'scraped_at': time.time(),
-                'tags': extract_crypto_tags(title + ' ' + summary)
+                'tags': crypto_symbols,
+                'sentiment': sentiment,
+                'cryptocurrencies_mentioned': crypto_symbols
             }
             
             # Envoyer vers Kafka
@@ -167,6 +178,53 @@ def extract_crypto_tags(text):
             found_tags.append(keyword)
     
     return list(set(found_tags))[:10]  # Max 10 tags uniques
+
+def analyze_sentiment(text):
+    """
+    Analyse le sentiment d'un texte avec TextBlob.
+    Convertit la polarity [-1, 1] en score [0, 1] pour compatibilité Spark.
+    
+    Args:
+        text: Texte à analyser
+        
+    Returns:
+        dict: {'score': float (0-1), 'label': str ('positive'|'negative'|'neutral')}
+    """
+    try:
+        if not text or not isinstance(text, str):
+            return {'score': 0.5, 'label': 'neutral'}
+        
+        blob = TextBlob(text)
+        polarity = blob.sentiment.polarity  # -1.0 à 1.0
+        
+        # Convertir en score 0-1
+        score = (polarity + 1) / 2
+        
+        # Déterminer le label selon les seuils Spark
+        if score > 0.6:
+            label = 'positive'
+        elif score < 0.4:
+            label = 'negative'
+        else:
+            label = 'neutral'
+        
+        return {'score': round(score, 4), 'label': label}
+    
+    except Exception as e:
+        print(f"Erreur analyse sentiment: {e}")
+        return {'score': 0.5, 'label': 'neutral'}
+
+def extract_crypto_symbols(text):
+    """
+    Extrait les symboles de cryptomonnaies mentionnés dans le texte.
+    Version renommée pour compatibilité avec le schéma Spark.
+    
+    Args:
+        text: Texte à analyser
+        
+    Returns:
+        list: Liste des symboles crypto (ex: ['BTC', 'ETH', 'SOL'])
+    """
 
 def main():
     print("=" * 80)
