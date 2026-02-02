@@ -67,7 +67,7 @@ check_and_free_port() {
 # 1. Démarrer Zookeeper, Kafka, TimescaleDB et Redis avec Docker
 log_info "Démarrage des services Docker (Zookeeper, Kafka, TimescaleDB, Redis, Monitoring)..."
 cd "$PROJECT_DIR"
-docker compose up -d
+docker compose up -d --build
 
 log_info "Attente du démarrage des services (40s pour stabilisation Kafka)..."
 sleep 40

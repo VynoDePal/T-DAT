@@ -8,7 +8,19 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
       KAFKA_OPTS: "-Xmx512M -Xms512M -javaagent:/usr/share/jmx_exporter/jmx_prometheus_javaagent.jar=7072:/usr/share/jmx_exporter/zookeeper.yml"
-    mem_limit: 768m
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 768M
+        reservations:
+          cpus: '0.25'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     volumes:
       - zookeeper_data:/var/lib/zookeeper/data
       - ./monitoring/jmx-exporter:/usr/share/jmx_exporter:ro
@@ -17,6 +29,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   # Kafka pour streaming de données
   kafka:
@@ -52,7 +65,19 @@ services:
       KAFKA_JMX_PORT: 9101
       KAFKA_JMX_HOSTNAME: kafka
       KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=kafka -Dcom.sun.management.jmxremote.rmi.port=9101"
-    mem_limit: 1.5g
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1536M
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     volumes:
       - kafka_data:/var/lib/kafka/data
       - ./monitoring/jmx-exporter:/usr/share/jmx_exporter:ro
@@ -61,6 +86,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    restart: unless-stopped
 
   # TimescaleDB pour les séries temporelles
   timescaledb:
@@ -74,6 +100,19 @@ services:
     volumes:
       - timescale_data:/var/lib/postgresql/data
       - ./database/timescaledb_setup.sql:/docker-entrypoint-initdb.d/init.sql
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -87,11 +126,25 @@ services:
       - "6380:6379"
     volumes:
       - redis_data:/data
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          cpus: '0.125'
+          memory: 64M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   # Backend Django
   django:
@@ -100,7 +153,7 @@ services:
       sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
              python manage.py createsuperuser --noinput --username admin --email admin@cryptoviz.com || true &&
-             gunicorn crypto_viz.wsgi:application --bind 0.0.0.0:8000"
+             gunicorn crypto_viz.wsgi:application --bind 0.0.0.0:8000 --workers 2 --threads 4 --worker-class gthread --worker-tmp-dir /dev/shm"
     environment:
       - DEBUG=${DEBUG:-True}
       - KAFKA_SERVERS=kafka:29092
@@ -117,6 +170,19 @@ services:
     volumes:
       - ./crypto_viz_backend:/app
       - static_data:/app/staticfiles
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     depends_on:
       kafka:
         condition: service_healthy
@@ -124,10 +190,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    restart: unless-stopped
 
   # Prometheus pour monitoring
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.55.0
     ports:
       - "9090:9090"
     volumes:
@@ -138,33 +205,76 @@ services:
       - '--storage.tsdb.path=/prometheus'
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
-      - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.retention.time=15d'
+      - '--storage.tsdb.retention.size=10GB'
+      - '--web.enable-lifecycle'
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
 
   # Grafana pour visualisation
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.3.0
     ports:
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
       - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3000}
+      - GF_SECURITY_COOKIE_SECURE=false
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     depends_on:
       - prometheus
     restart: unless-stopped
 
   # Kafka Exporter pour métriques consommateurs
   kafka-exporter:
-    image: danielqsj/kafka-exporter:latest
+    image: danielqsj/kafka-exporter:v1.8.0
     ports:
       - "9308:9308"
     command:
       - '--kafka.server=kafka:29092'
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          cpus: '0.125'
+          memory: 64M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
     depends_on:
       kafka:
         condition: service_healthy
@@ -172,13 +282,26 @@ services:
 
   # Node Exporter pour métriques système
   node-exporter:
-    image: prom/node-exporter:latest
+    image: prom/node-exporter:v1.8.2
     ports:
       - "9100:9100"
     command:
       - '--path.procfs=/host/proc'
       - '--path.sysfs=/host/sys'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 64M
+        reservations:
+          cpus: '0.125'
+          memory: 32M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
@@ -187,11 +310,24 @@ services:
 
   # Redis Exporter pour métriques Redis
   redis-exporter:
-    image: oliver006/redis_exporter:latest
+    image: oliver006/redis_exporter:v1.67.0
     ports:
       - "9121:9121"
     environment:
       - REDIS_ADDR=redis:6379
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 64M
+        reservations:
+          cpus: '0.125'
+          memory: 32M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
     depends_on:
       redis:
         condition: service_healthy
@@ -199,11 +335,24 @@ services:
 
   # Postgres Exporter pour métriques TimescaleDB
   postgres-exporter:
-    image: prometheuscommunity/postgres-exporter:latest
+    image: prometheuscommunity/postgres-exporter:v0.16.0
     ports:
       - "9187:9187"
     environment:
       - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@timescaledb:5432/${POSTGRES_DB:-crypto_viz_ts}?sslmode=disable
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          cpus: '0.125'
+          memory: 64M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
     depends_on:
       timescaledb:
         condition: service_healthy
