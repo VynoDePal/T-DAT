@@ -1,15 +1,18 @@
 """
 Producteur Kafka pour les données de prix et trades depuis Kraken WebSocket.
+Récupère dynamiquement la liste des cryptos depuis l'API Django.
 """
 
 import json
 import os
 import time
 import threading
+import urllib.request
 import websocket
 from confluent_kafka import Producer
 
 KAFKA_SERVERS = os.environ.get('KAFKA_SERVERS', 'localhost:9092')
+API_BASE_URL = os.environ.get('API_BASE_URL', 'http://localhost:8000')
 
 producer_config = {
     'bootstrap.servers': KAFKA_SERVERS,
@@ -28,19 +31,56 @@ producer = Producer(producer_config)
 
 WS_URL = "wss://ws.kraken.com"
 
-kraken_top8_pairs = [
-    "XBT/USD",   # BTC
+# Liste par défaut en cas d'indisponibilité de l'API
+DEFAULT_PAIRS = [
+    "BTC/USD",   # Bitcoin
     "ETH/USD",
     "USDT/USD",
     "SOL/USD",
     "ADA/USD",
-    "MATIC/USD",
     "DOT/USD",
     "LINK/USD"
 ]
 
+# Variable globale pour stocker les paires actives
+kraken_pairs = []
+
 last_prices = {}
 PRICE_CHANGE_THRESHOLD = 0.5
+
+def get_active_cryptos_from_api():
+    """
+    Récupère la liste des cryptos actives depuis l'API Django.
+    Retourne une liste de paires au format Kraken (ex: XBT/USD).
+    """
+    try:
+        url = f"{API_BASE_URL}/api/v1/config/crypto/"
+        req = urllib.request.Request(url, method='GET')
+        req.add_header('Accept', 'application/json')
+        
+        with urllib.request.urlopen(req, timeout=5) as response:
+            data = json.loads(response.read().decode('utf-8'))
+            
+            # Extraire les paires de trading actives
+            pairs = []
+            for crypto in data.get('results', []):
+                if crypto.get('is_active', False):
+                    symbol = crypto.get('symbol', '')
+                    # Kraken utilise XBT au lieu de BTC pour Bitcoin
+                    if symbol == 'BTC/USD':
+                        symbol = 'XBT/USD'
+                    pairs.append(symbol)
+            
+            if pairs:
+                print(f"✓ {len(pairs)} paires récupérées depuis l'API")
+                return pairs
+            else:
+                print("⚠ Aucune crypto active trouvée dans l'API")
+                return DEFAULT_PAIRS
+                
+    except Exception as e:
+        print(f"⚠ Erreur API ({e}), utilisation des paires par défaut")
+        return DEFAULT_PAIRS
 
 def delivery_report(err, msg):
     """Callback pour les confirmations de livraison."""
@@ -81,21 +121,26 @@ def on_open(ws):
     """Souscription aux canaux Kraken au démarrage."""
     print("WebSocket Kraken connecté")
     
+    # Récupérer dynamiquement les paires depuis l'API
+    pairs = get_active_cryptos_from_api()
+    global kraken_pairs
+    kraken_pairs = pairs
+    
     # Abonnement ticker
     ws.send(json.dumps({
         "event": "subscribe",
-        "pair": kraken_top8_pairs,
+        "pair": pairs,
         "subscription": {"name": "ticker"}
     }))
-    print(f"Souscription aux tickers pour {len(kraken_top8_pairs)} paires")
+    print(f"📊 Souscription aux tickers pour {len(pairs)} paires: {', '.join(pairs)}")
     
     # Abonnement trades
     ws.send(json.dumps({
         "event": "subscribe",
-        "pair": kraken_top8_pairs,
+        "pair": pairs,
         "subscription": {"name": "trade"}
     }))
-    print(f"💱 Souscription aux trades pour {len(kraken_top8_pairs)} paires")
+    print(f"💱 Souscription aux trades pour {len(pairs)} paires")
 
 def on_message(ws, message):
     """Traitement des messages Kraken."""
@@ -201,7 +246,7 @@ if __name__ == "__main__":
     print(f"Kafka: {KAFKA_SERVERS}")
     print(f"Topics: rawticker, rawtrade, rawalert")
     print(f"WebSocket: {WS_URL}")
-    print(f"Pairs: {', '.join(kraken_top8_pairs)}")
+    print(f"Pairs: {', '.join(get_active_cryptos_from_api())}")
     print("=" * 80)
     print()
     

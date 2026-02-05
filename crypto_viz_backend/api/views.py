@@ -548,7 +548,7 @@ l'intervalle dans lequel le prix a ~68% de chances de se trouver (±1 écart-typ
 class TickerHistoryView(APIView):
     """
     API pour récupérer l'historique des tickers (prix).
-    Endpoint: /api/v1/ticker/{pair}/historique
+    Endpoint: /api/v1/ticker/historique/?pair=XBT/USD
     """
     
     @extend_schema(
@@ -580,7 +580,7 @@ Chaque ticker inclut le dernier prix, le bid, l'ask et le volume 24h.
 
 ```javascript
 // Récupérer l'historique des prix
-const response = await fetch('/api/v1/ticker/XBT/USD/historique/?periode=24h');
+const response = await fetch('/api/v1/ticker/historique/?pair=XBT/USD&periode=24h');
 const data = await response.json();
 
 // Créer un graphique candlestick
@@ -661,7 +661,7 @@ Le spread (ask - bid) indique la liquidité du marché:
 class TradeHistoryView(APIView):
     """
     API pour récupérer l'historique des trades.
-    Endpoint: /api/v1/trade/{pair}/historique
+    Endpoint: /api/v1/trade/historique/?pair=XBT/USD
     """
     
     @extend_schema(
@@ -680,7 +680,7 @@ Les données incluent le prix, le volume et le côté (achat/vente).
 
 ```javascript
 // Récupérer les trades récents
-const response = await fetch('/api/v1/trade/XBT/USD/historique/?periode=1h');
+const response = await fetch('/api/v1/trade/historique/?pair=XBT/USD&periode=1h');
 const data = await response.json();
 
 // Calculer le ratio buy/sell
@@ -1058,3 +1058,78 @@ def health_check(request):
         'service': 'CRYPTO VIZ API',
         'version': '1.0.0'
     })
+
+
+# =============================================================================
+# LISTE DES CRYPTOS DISPONIBLES
+# =============================================================================
+
+@extend_schema(
+    tags=['Cryptos'],
+    operation_id='list_cryptos',
+    summary='Liste toutes les cryptos disponibles',
+    description='''
+## 📊 Liste des Cryptos Disponibles
+
+Retourne la liste de toutes les cryptos/paires de trading disponibles dans la base de données,
+avec le nombre d'enregistrements et la dernière mise à jour pour chaque type de données.
+
+## Types de données
+
+| Type | Description |
+|------|-------------|
+| `ticker` | Données de prix (paires ex: XBT/USD) |
+| `trade` | Historique des trades |
+| `sentiment` | Analyse de sentiment |
+| `prediction` | Prédictions de prix |
+
+## Utilisation
+
+```javascript
+const response = await fetch('/api/v1/cryptos/');
+const data = await response.json();
+console.log(data.trading_pairs); // ['XBT/USD', 'ETH/USD', ...]
+```
+    ''',
+    responses={200: dict},
+)
+@api_view(['GET'])
+def list_cryptos(request):
+    """Liste toutes les cryptos disponibles dans la base."""
+    try:
+        # Récupérer toutes les données
+        all_data = timescale_client.get_available_cryptos()
+        trading_pairs = timescale_client.get_trading_pairs()
+        
+        # Organiser par type
+        by_type = {}
+        for row in all_data:
+            data_type = row['data_type']
+            if data_type not in by_type:
+                by_type[data_type] = []
+            by_type[data_type].append({
+                'symbol': row['symbol'],
+                'count': row['count'],
+                'last_update': row['last_update']
+            })
+        
+        # Extraire les paires de trading uniques
+        pairs = [p['pair'] for p in trading_pairs]
+        
+        return Response({
+            'trading_pairs': pairs,
+            'by_data_type': by_type,
+            'total_pairs': len(pairs),
+            'summary': {
+                'ticker': len(by_type.get('ticker', [])),
+                'trade': len(by_type.get('trade', [])),
+                'sentiment': len(by_type.get('sentiment', [])),
+                'prediction': len(by_type.get('prediction', []))
+            }
+        })
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération des cryptos: {e}")
+        return Response(
+            {'error': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

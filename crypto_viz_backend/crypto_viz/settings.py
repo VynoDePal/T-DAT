@@ -148,8 +148,8 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle'
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '100/hour',
-        'user': '1000/hour'
+        'anon': '1000/hour',
+        'user': '5000/hour'
     },
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
@@ -365,6 +365,10 @@ Gestion des crypto-monnaies suivies et des paramètres de visualisation.
         {
             'url': os.environ.get('API_BASE_URL', 'http://localhost:8000'),
             'description': 'Serveur API'
+        },
+        {
+            'url': f"http://{os.environ.get('HOST_IP', '192.168.218.62')}:8000",
+            'description': 'Serveur réseau local (accès depuis autres machines)'
         },
         {
             'url': 'http://localhost:8000',

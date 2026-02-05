@@ -5,17 +5,17 @@
 Apache Kafka sert de **Message Broker** central dans l'architecture CRYPTO VIZ. Il assure la durabilité, la scalabilité et la distribution des données entre les producers et le traitement Spark.
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         APACHE KAFKA 4.1.1                              │
-│                    (Mode KRaft - Sans ZooKeeper)                        │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────┐ │
-│   │  PRODUCERS  │───▶│    KAFKA    │───▶│  CONSUMERS  │    │STORAGE  │ │
-│   │             │    │             │    │             │    │         │ │
-│   │• Scraper    │    │  ┌───────┐  │    │• Spark Job 1│    │• Logs   │ │
-│   │• Kraken WS │    │  │ Topics │  │    │• Spark Job 2│    │• Metrics│ │
-│   └─────────────┘    │  │• raw*  │  │    └─────────────┘    └─────────┘ │
+┌──────────────────────────────────────────────────────────────────────────┐
+│                         APACHE KAFKA 4.1.1                               │
+│                    (Mode KRaft - Sans ZooKeeper)                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────┐   │
+│   │  PRODUCERS  │───▶│    KAFKA    │───▶│  CONSUMERS  │    │STORAGE  │   │
+│   │             │    │             │    │             │    │         │   │
+│   │• Scraper    │    │  ┌───────┐  │    │• Spark Job 1│    │• Logs   │   │
+│   │• Kraken WS  │    │  │ Topics│  │    │• Spark Job 2│    │• Metrics│   │
+│   └─────────────┘    │  │• raw* │  │    └─────────────┘    └─────────┘   │
 │                      │  └───────┘  │                                     │
 │                      │             │                                     │
 │                      │  ┌───────┐  │                                     │
@@ -28,7 +28,7 @@ Apache Kafka sert de **Message Broker** central dans l'architecture CRYPTO VIZ. 
 │                      │  │Quorum │  │                                     │
 │                      │  └───────┘  │                                     │
 │                      └─────────────┘                                     │
-└─────────────────────────────────────────────────────────────────────────┘
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Configuration KRaft (sans ZooKeeper)
@@ -77,20 +77,20 @@ services:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     LISTENERS KAFKA                          │
+│                     LISTENERS KAFKA                         │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│   PLAINTEXT://:9092 (localhost:9092)                       │
-│   ├── Usage: Clients externes (Spark, Producers locaux)   │
+│   PLAINTEXT://:9092 (localhost:9092)                        │
+│   ├── Usage: Clients externes (Spark, Producers locaux)     │
 │   └── Accessible depuis: Host machine                       │
 │                                                             │
-│   PLAINTEXT_INTERNAL://:29092 (kafka:29092)              │
+│   PLAINTEXT_INTERNAL://:29092 (kafka:29092)                 │
 │   ├── Usage: Communication inter-broker                     │
-│   └── Accessible depuis: Réseau Docker interne             │
+│   └── Accessible depuis: Réseau Docker interne              │
 │                                                             │
 │   CONTROLLER://:9093                                        │
-│   ├── Usage: KRaft consensus (quorum)                      │
-│   └── Accessible depuis: Interne uniquement                │
+│   ├── Usage: KRaft consensus (quorum)                       │
+│   └── Accessible depuis: Interne uniquement                 │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -244,24 +244,24 @@ Tous les messages utilisent **JSON UTF-8** avec une clé de partitionnement.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                      MESSAGE KAFKA                           │
+│                      MESSAGE KAFKA                          │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│   Key: String (UTF-8 encoded)                              │
-│   ├── rawarticle: source ("CoinDesk", "Cointelegraph", ...)  │
-│   ├── rawticker: pair ("XBT/USD", "ETH/USD", ...)            │
-│   ├── rawtrade: pair ("XBT/USD", ...)                        │
-│   └── rawalert: pair ("XBT/USD", ...)                        │
+│   Key: String (UTF-8 encoded)                               │
+│   ├── rawarticle: source ("CoinDesk", "Cointelegraph", ...) │
+│   ├── rawticker: pair ("XBT/USD", "ETH/USD", ...)           │
+│   ├── rawtrade: pair ("XBT/USD", ...)                       │
+│   └── rawalert: pair ("XBT/USD", ...)                       │
 │                                                             │
-│   Value: JSON String (UTF-8 encoded)                         │
-│   ├── rawarticle: Article payload                            │
-│   ├── rawticker: Ticker payload                              │
-│   ├── rawtrade: Trade payload                                │
-│   └── rawalert: Alert payload                                │
+│   Value: JSON String (UTF-8 encoded)                        │
+│   ├── rawarticle: Article payload                           │
+│   ├── rawticker: Ticker payload                             │
+│   ├── rawtrade: Trade payload                               │
+│   └── rawalert: Alert payload                               │
 │                                                             │
-│   Headers: Optionnel (non utilisé)                           │
+│   Headers: Optionnel (non utilisé)                          │
 │                                                             │
-│   Timestamp: Unix timestamp (ms)                             │
+│   Timestamp: Unix timestamp (ms)                            │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```

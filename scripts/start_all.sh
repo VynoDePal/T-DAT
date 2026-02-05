@@ -83,7 +83,76 @@ docker exec -i t-dat-timescaledb-1 psql -U postgres -d crypto_viz_ts < "$PROJECT
 # 4. Backend Django déjà démarré par Docker Compose
 log_info "✓ Backend Django démarré via Docker Compose"
 
-# 5. Démarrer les jobs Spark
+# 5a. Initialiser les données de configuration (cryptos)
+log_info "Initialisation des cryptos dans la base Django..."
+docker exec t-dat-django-1 python manage.py shell -c "
+from api.models import CryptoConfiguration
+
+cryptos = [
+    {'symbol': 'BTC/USD', 'name': 'Bitcoin'},
+    {'symbol': 'ETH/USD', 'name': 'Ethereum'},
+    {'symbol': 'SOL/USD', 'name': 'Solana'},
+    {'symbol': 'ADA/USD', 'name': 'Cardano'},
+    {'symbol': 'DOT/USD', 'name': 'Polkadot'},
+    {'symbol': 'LINK/USD', 'name': 'Chainlink'},
+    {'symbol': 'USDT/USD', 'name': 'Tether'},
+]
+
+created_count = 0
+for crypto in cryptos:
+    obj, created = CryptoConfiguration.objects.get_or_create(
+        symbol=crypto['symbol'],
+        defaults={'name': crypto['name'], 'is_active': True}
+    )
+    if created:
+        created_count += 1
+
+print(f'{created_count} nouvelles cryptos ajoutées, {CryptoConfiguration.objects.count()} total')
+" 2>/dev/null || log_warn "Cryptos déjà initialisées"
+
+# 5b. Initialiser les configurations de visualisation par défaut
+log_info "Initialisation des configurations de visualisation..."
+docker exec t-dat-django-1 python manage.py shell -c "
+from api.models import VisualizationParameter
+
+configs = [
+    {
+        'name': 'Kevyn Config Ethereum',
+        'crypto_symbol': 'ETH',
+        'time_range': '1h',
+        'chart_type': 'candlestick',
+        'indicators': ['EMA_12', 'EMA_26']
+    },
+    {
+        'name': 'Kanta Veut pas perdre sa BIT',
+        'crypto_symbol': 'BTC',
+        'time_range': '24h',
+        'chart_type': 'area',
+        'indicators': ['MACD']
+    },
+]
+
+created_count = 0
+for config in configs:
+    obj, created = VisualizationParameter.objects.get_or_create(
+        name=config['name'],
+        defaults={
+            'crypto_symbol': config['crypto_symbol'],
+            'time_range': config['time_range'],
+            'chart_type': config['chart_type'],
+            'indicators': config['indicators']
+        }
+    )
+    if created:
+        created_count += 1
+        print(f\"  ✓ Créé: {config['name']}\")
+    else:
+        print(f\"  ℹ Existe déjà: {config['name']}\")
+
+print(f'{created_count} nouvelles configs ajoutées, {VisualizationParameter.objects.count()} total')
+" 2>/dev/null || log_warn "Configs déjà initialisées"
+
+# 6. Démarrer les jobs Spark
 log_info "Démarrage des jobs Spark..."
 cd "$PROJECT_DIR/spark_jobs"
 

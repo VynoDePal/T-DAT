@@ -5,43 +5,43 @@
 TimescaleDB est une extension PostgreSQL spécialisée pour les **séries temporelles**. Elle offre des performances supérieures pour les données timestampées avec partitioning automatique et indexation optimisée.
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         TIMESCALEDB LAYER                               │
-│                   (PostgreSQL 18 + TimescaleDB Extension)                 │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│   ┌─────────────────────────────────────────────────────────────────────┐ │
-│   │                    HYPERTABLES (Time-Series)                        │ │
-│   │                                                                     │ │
-│   │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐   │ │
-│   │  │ticker_data  │ │trade_data   │ │article_data │ │alert_data   │   │ │
-│   │  ├─────────────┤ ├─────────────┤ ├─────────────┤ ├─────────────┤   │ │
-│   │  │timestamp(PK)│ │timestamp(PK)│ │timestamp(PK)│ │timestamp(PK)│   │ │
-│   │  │pair         │ │pair         │ │article_id   │ │pair         │   │ │
-│   │  │last         │ │price        │ │title        │ │last_price   │   │ │
-│   │  │bid          │ │volume       │ │url          │ │change_pct   │   │ │
-│   │  │ask          │ │side         │ │website      │ │threshold    │   │ │
-│   │  │volume_24h   │ │             │ │summary      │ │alert_type   │   │ │
-│   │  │             │ │             │ │sentiment_*  │ │             │   │ │
-│   │  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘   │ │
-│   │                                                                     │ │
-│   │  ┌─────────────┐ ┌─────────────┐                                    │ │
-│   │  │sentiment_   │ │prediction_  │                                    │ │
-│   │  │data         │ │data         │                                    │ │
-│   │  ├─────────────┤ ├─────────────┤                                    │ │
-│   │  │timestamp(PK)│ │timestamp(PK)│                                    │ │
-│   │  │crypto_symbol│ │crypto_symbol│                                    │ │
-│   │  │sentiment_*  │ │predicted_pr │                                    │ │
-│   │  │confidence   │ │confidence_* │                                    │ │
-│   │  └─────────────┘ └─────────────┘                                    │ │
-│   │                                                                     │ │
-│   │  CHUNKS (Partitionnement automatique par temps):                    │ │
-│   │  • Chunk actif: données récentes (7 derniers jours)               │ │
-│   │  • Chunks compressés: données anciennes compressées                 │ │
-│   │                                                                     │ │
-│   └─────────────────────────────────────────────────────────────────────┘ │
-│                                                                           │
-└───────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         TIMESCALEDB LAYER                                   │
+│                   (PostgreSQL 18 + TimescaleDB Extension)                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐   │
+│   │                    HYPERTABLES (Time-Series)                        │   │
+│   │                                                                     │   │
+│   │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐    │   │
+│   │  │ticker_data  │ │trade_data   │ │article_data │ │alert_data   │    │   │
+│   │  ├─────────────┤ ├─────────────┤ ├─────────────┤ ├─────────────┤    │   │
+│   │  │timestamp(PK)│ │timestamp(PK)│ │timestamp(PK)│ │timestamp(PK)│    │   │
+│   │  │pair         │ │pair         │ │article_id   │ │pair         │    │   │
+│   │  │last         │ │price        │ │title        │ │last_price   │    │   │
+│   │  │bid          │ │volume       │ │url          │ │change_pct   │    │   │
+│   │  │ask          │ │side         │ │website      │ │threshold    │    │   │
+│   │  │volume_24h   │ │             │ │summary      │ │alert_type   │    │   │
+│   │  │             │ │             │ │sentiment_*  │ │             │    │   │
+│   │  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘    │   │
+│   │                                                                     │   │
+│   │  ┌─────────────┐ ┌─────────────┐                                    │   │
+│   │  │sentiment_   │ │prediction_  │                                    │   │
+│   │  │data         │ │data         │                                    │   │
+│   │  ├─────────────┤ ├─────────────┤                                    │   │
+│   │  │timestamp(PK)│ │timestamp(PK)│                                    │   │
+│   │  │crypto_symbol│ │crypto_symbol│                                    │   │
+│   │  │sentiment_*  │ │predicted_pr │                                    │   │
+│   │  │confidence   │ │confidence_* │                                    │   │
+│   │  └─────────────┘ └─────────────┘                                    │   │
+│   │                                                                     │   │
+│   │  CHUNKS (Partitionnement automatique par temps):                    │   │
+│   │  • Chunk actif: données récentes (7 derniers jours)                 │   │
+│   │  • Chunks compressés: données anciennes compressées                 │   │
+│   │                                                                     │   │
+│   └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Architecture de stockage
@@ -50,35 +50,35 @@ TimescaleDB est une extension PostgreSQL spécialisée pour les **séries tempor
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                    COMPARISON: TABLE vs HYPERTABLE                        │
+│                    COMPARISON: TABLE vs HYPERTABLE                      │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
 │   TABLE STANDARD PostgreSQL                                             │
 │   ┌─────────────────────────────────────────┐                           │
 │   │  timestamp │ pair    │ price            │                           │
 │   ├─────────────────────────────────────────┤                           │
-│   │  T1       │ BTC/USD │ 50000           │ ← 1 table = 1 fichier   │
-│   │  T2       │ ETH/USD │ 3000            │                           │
-│   │  T3       │ BTC/USD │ 50100           │ ← Insertions lentes       │
-│   │  T4       │ ...     │ ...             │   (index maintenance)     │
+│   │  T1        │ BTC/USD │ 50000            │ ← 1 table = 1 fichier     │
+│   │  T2        │ ETH/USD │ 3000             │                           │
+│   │  T3        │ BTC/USD │ 50100            │ ← Insertions lentes       │
+│   │  T4        │ ...     │ ...              │   (index maintenance)     │
 │   └─────────────────────────────────────────┘                           │
 │                                                                         │
 │   HYPERTABLE TimescaleDB                                                │
 │   ┌─────────────────────────────────────────────────────────────────┐   │
-│   │  Chunk 1 (Jour 1)    │ Chunk 2 (Jour 2)    │ Chunk 3 (Jour 3)  │   │
-│   │  ┌──────────────┐    │ ┌──────────────┐    │ ┌──────────────┐  │   │
-│   │  │ timestamp    │    │ │ timestamp    │    │ │ timestamp    │  │   │
-│   │  │ T1..T1000    │    │ │ T1001..T2000 │    │ │ T2001..T3000 │  │   │
-│   │  └──────────────┘    │ └──────────────┘    │ └──────────────┘  │   │
+│   │  Chunk 1 (Jour 1)    │ Chunk 2 (Jour 2)     │ Chunk 3 (Jour 3)  │   │
+│   │  ┌──────────────┐    │ ┌──────────────┐     │ ┌──────────────┐  │   │
+│   │  │ timestamp    │    │ │ timestamp    │     │ │ timestamp    │  │   │
+│   │  │ T1..T1000    │    │ │ T1001..T2000 │     │ │ T2001..T3000 │  │   │
+│   │  └──────────────┘    │ └──────────────┘     │ └──────────────┘  │   │
 │   │       │              │       │              │       │           │   │
 │   │   ┌───┴───┐          │   ┌───┴───┐          │   ┌───┴───┐       │   │
 │   │   │Index  │          │   │Index  │          │   │Index  │       │   │
 │   │   │BRIN   │          │   │BRIN   │          │   │BRIN   │       │   │
 │   │   └───────┘          │   └───────┘          │   └───────┘       │   │
-│   │                     │                      │                      │   │
-│   │  • Insertions rapides (pas de lock sur tout l'index)             │   │
-│   │  • Queries temporelles optimisées (pruning de chunks)            │   │
-│   │  • Compression automatique des anciens chunks                     │   │
+│   │                      │                      │                   │   │
+│   │  • Insertions rapides (pas de lock sur tout l'index)            │   │
+│   │  • Queries temporelles optimisées (pruning de chunks)           │   │
+│   │  • Compression automatique des anciens chunks                   │   │
 │   └─────────────────────────────────────────────────────────────────┘   │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘

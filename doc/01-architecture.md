@@ -17,7 +17,7 @@ L'architecture CRYPTO VIZ suit un pattern **Lambda simplifié** avec les couches
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              DATA SOURCES                                   │
 ├──────────────────────────────┬──────────────────────────────────────────────┤
-│       RSS Feeds              │         Kraken WebSocket                   │
+│       RSS Feeds              │         Kraken WebSocket                     │
 │  ┌─────────┐ ┌─────────┐     │     ┌─────────────────────────────┐          │
 │  │CoinDesk │ │Cointele │     │     │  wss://ws.kraken.com        │          │
 │  │Decrypt  │ │graph    │─────┼────▶│                             │          │
@@ -34,53 +34,53 @@ L'architecture CRYPTO VIZ suit un pattern **Lambda simplifié** avec les couches
 │  │  │ Feed Parsing      │  │    │  │ WebSocket Connection            │    │ │
 │  │  │ (feedparser)      │  │    │  │ (websocket-client)              │    │ │
 │  │  └─────────┬─────────┘  │    │  └────────────┬────────────────────┘    │ │
-│  │            ▼             │    │               ▼                         │ │
+│  │            ▼            │    │               ▼                         │ │
 │  │  ┌───────────────────┐  │    │  ┌─────────────────────────────────┐    │ │
 │  │  │ Content Extract   │  │    │  │ Message Parser                  │    │ │
 │  │  │ (BeautifulSoup)   │  │    │  │ • ticker: price, volume         │    │ │
 │  │  └─────────┬─────────┘  │    │  │ • trade: price, vol, side       │    │ │
-│  │            ▼             │    │  └────────────┬────────────────────┘    │ │
+│  │            ▼            │    │  └────────────┬────────────────────┘    │ │
 │  │  ┌───────────────────┐  │    │               ▼                         │ │
 │  │  │ Sentiment Analysis│  │    │  ┌─────────────────────────────────┐    │ │
 │  │  │ (TextBlob)        │  │    │  │ Alert Detection                 │    │ │
-│  │  │ polarity→score   │  │    │  │ price_change > 0.5%             │    │ │
+│  │  │ polarity→score    │  │    │  │ price_change > 0.5%             │    │ │
 │  │  └─────────┬─────────┘  │    │  └────────────┬────────────────────┘    │ │
-│  │            ▼             │    │               │                         │ │
+│  │            ▼            │    │               │                         │ │
 │  │  ┌───────────────────┐  │    │               │                         │ │
 │  │  │ JSON Payload      │  │    │               │                         │ │
 │  │  └─────────┬─────────┘  │    │               │                         │ │
-│  └────────────┼────────────┘    │               │                         │ │
-└───────────────┼─────────────────┴───────────────┼─────────────────────────┘
-                │                                 │
+│  └────────────┼────────────┘    └───────────────|─────────────────────────┘ │
+└───────────────┼─────────────────────────────────|───────────────────────────┘
+                │                                 |
                 └─────────────────┬───────────────┘
                                   ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           APACHE KAFKA LAYER                                │
 │                     (Apache Kafka 4.1.1 - KRaft Mode)                       │
-├────────────────┬────────────────┬────────────────┬────────────────────────────┤
-│  rawarticle    │  rawticker     │   rawtrade     │    rawalert                │
-│  ─────────────│  ─────────────│  ─────────────│    ────────────            │
-│  Partition: 0│  Partition: 0 │  Partition: 0 │    Partition: 0            │
-│  Replicas: 1  │  Replicas: 1  │  Replicas: 1  │    Replicas: 1             │
-│               │               │               │                            │
-│  Key: source  │  Key: pair    │  Key: pair    │    Key: pair               │
-│  Value: JSON  │  Value: JSON  │  Value: JSON  │    Value: JSON             │
-│  Retention: 7d│  Retention: 7d│  Retention: 7d│    Retention: 1d           │
-└────────┬───────┴────────┬───────┴────────┬───────┴────────┬───────────────────┘
-         │                │                │               │
-         ▼                ▼                ▼               ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                     APACHE SPARK STRUCTURED STREAMING                       │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
+├────────────────┬────────────────┬────────────────┬──────────────────────────┤
+│  rawarticle    │  rawticker     │   rawtrade     │    rawalert              │
+│  ───────────── │  ───────────── │  ───────────── │    ────────────          │
+│  Partition: 0  │  Partition: 0  │  Partition: 0  │    Partition: 0          │
+│  Replicas: 1   │  Replicas: 1   │  Replicas: 1   │    Replicas: 1           │
+│                │                │                │                          │
+│  Key: source   │  Key: pair     │  Key: pair     │    Key: pair             │
+│  Value: JSON   │  Value: JSON   │  Value: JSON   │    Value: JSON           │
+│  Retention: 7d │  Retention: 7d │  Retention: 7d │    Retention: 1d         │
+└────────┬───────┴────────┬───────┴────────┬───────┴────────┬─────────────────┘
+         │                │                │                │
+         ▼                ▼                ▼                ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│                     APACHE SPARK STRUCTURED STREAMING                     │
+├───────────────────────────────────────────────────────────────────────────┤
+│                                                                           │
 │   ┌─────────────────────────────┐   ┌─────────────────────────────────┐   │
 │   │     JOB 1: INGESTION        │   │     JOB 2: ANALYTICS            │   │
 │   │   kafka_to_timescale.py     │   │   sentiment_prediction_job.py   │   │
 │   │                             │   │                                 │   │
 │   │   SparkSession              │   │   SparkSession                  │   │
-│   │   ├─ master: local[*]        │   │   ├─ master: local[*]            │   │
-│   │   ├─ app: CRYPTO_VIZ        │   │   ├─ app: CRYPTO_VIZ_Analytics   │   │
-│   │   └─ jars: kafka, postgres  │   │   └─ jars: kafka, postgres       │   │
+│   │   ├─ master: local[*]       │   │   ├─ master: local[*]           │   │
+│   │   ├─ app: CRYPTO_VIZ        │   │   ├─ app: CRYPTO_VIZ_Analytics  │   │
+│   │   └─ jars: kafka, postgres  │   │   └─ jars: kafka, postgres      │   │
 │   │                             │   │                                 │   │
 │   │   STREAMS:                  │   │   STREAMS:                      │   │
 │   │   ┌──────────────────┐      │   │   ┌────────────────────────┐    │   │
@@ -92,22 +92,22 @@ L'architecture CRYPTO VIZ suit un pattern **Lambda simplifié** avec les couches
 │   │   │ foreachBatch     │      │   │   │   .agg(avg(score))     │    │   │
 │   │   │   JDBC append    │      │   │   │ writeStream            │    │   │
 │   │   └────────┬─────────┘      │   │   │   JDBC append          │    │   │
-│   │            ▼                 │   │   └────────┬───────────────┘    │   │
-│   │   ┌──────────────────┐       │   │            ▼                    │   │
+│   │            ▼                │   │   └────────┬───────────────┘    │   │
+│   │   ┌──────────────────┐      │   │            ▼                    │   │
 │   │   │ rawticker        │      │   │   ┌────────────────────────┐    │   │
 │   │   │ readStream       │      │   │   │ rawticker              │    │   │
 │   │   │ from_json        │──────┼───┼──▶│ readStream             │    │   │
 │   │   │ writeStream      │      │   │   │ withWatermark(2m)      │    │   │
 │   │   │   JDBC append    │      │   │   │ groupBy(window(3m,30s))│    │   │
 │   │   └────────┬─────────┘      │   │   │   .agg(avg,stddev)     │    │   │
-│   │            ▼                 │   │   │ predict(ma+volatility)│    │   │
+│   │            ▼                │   │   │ predict(ma+volatility) │    │   │
 │   │   ┌──────────────────┐      │   │   │ writeStream            │    │   │
 │   │   │ rawtrade         │      │   │   └────────┬───────────────┘    │   │
 │   │   │ (similaire)      │      │   │            ▼                    │   │
 │   │   └──────────────────┘      │   │   ┌────────────────────────┐    │   │
 │   │                             │   │   │ Tables:                │    │   │
-│   │   ┌──────────────────┐      │   │   │ • sentiment_data     │    │   │
-│   │   │ rawalert         │      │   │   │ • prediction_data    │    │   │
+│   │   ┌──────────────────┐      │   │   │ • sentiment_data       │    │   │
+│   │   │ rawalert         │      │   │   │ • prediction_data      │    │   │
 │   │   │ (similaire)      │      │   │   └────────────────────────┘    │   │
 │   │   └──────────────────┘      │   │                                 │   │
 │   │                             │   └─────────────────────────────────┘   │
@@ -128,51 +128,51 @@ L'architecture CRYPTO VIZ suit un pattern **Lambda simplifié** avec les couches
                                          │
                                          ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        TIMESCALEDB STORAGE LAYER                          │
+│                        TIMESCALEDB STORAGE LAYER                            │
 │                    (PostgreSQL 18 + TimescaleDB Extension)                  │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│   HYPERTABLES (Time-Series Optimized):                                    │
+│   HYPERTABLES (Time-Series Optimized):                                      │
 │                                                                             │
-│   ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────────┐│
-│   │  ticker_data    │  │  trade_data     │  │  article_data               ││
-│   │  ────────────── │  │  ────────────── │  │  ────────────────────────── ││
-│   │  timestamp (PK) │  │  timestamp (PK) │  │  timestamp (PK)             ││
-│   │  pair           │  │  pair           │  │  article_id                 ││
-│   │  last           │  │  price          │  │  title                        ││
-│   │  bid            │  │  volume         │  │  url                          ││
-│   │  ask            │  │  side           │  │  website                      ││
-│   │  volume_24h     │  │                 │  │  summary                      ││
-│   │                 │  │                 │  │  cryptocurrencies_mentioned   ││
-│   │  Partition:     │  │  Partition:     │  │  sentiment_score              ││
-│   │  time_bucket    │  │  time_bucket    │  │  sentiment_label              ││
-│   │  (1 hour)       │  │  (1 hour)       │  │                               ││
-│   └─────────────────┘  └─────────────────┘  └─────────────────────────────┘│
+│   ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────────┐ │
+│   │  ticker_data    │  │  trade_data     │  │  article_data               │ │
+│   │  ────────────── │  │  ────────────── │  │  ────────────────────────── │ │
+│   │  timestamp (PK) │  │  timestamp (PK) │  │  timestamp (PK)             │ │
+│   │  pair           │  │  pair           │  │  article_id                 │ │
+│   │  last           │  │  price          │  │  title                      │ │
+│   │  bid            │  │  volume         │  │  url                        │ │
+│   │  ask            │  │  side           │  │  website                    │ │
+│   │  volume_24h     │  │                 │  │  summary                    │ │
+│   │                 │  │                 │  │  cryptocurrencies_mentione  │ │
+│   │  Partition:     │  │  Partition:     │  │  sentiment_score            │ │
+│   │  time_bucket    │  │  time_bucket    │  │  sentiment_label            │ │
+│   │  (1 hour)       │  │  (1 hour)       │  │                             │ │
+│   └─────────────────┘  └─────────────────┘  └─────────────────────────────┘ │
 │                                                                             │
-│   ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────────┐│
-│   │  alert_data     │  │ sentiment_data  │  │  prediction_data          ││
-│   │  ────────────── │  │  ────────────── │  │  ───────────────────────── ││
-│   │  timestamp (PK) │  │  timestamp (PK) │  │  timestamp (PK)             ││
-│   │  pair           │  │  crypto_symbol  │  │  crypto_symbol              ││
-│   │  last_price     │  │  sentiment_score│  │  predicted_price            ││
-│   │  change_percent │  │  sentiment_label│  │  actual_price               ││
-│   │  threshold      │  │  source         │  │  model_name                 ││
-│   │  alert_type     │  │  confidence     │  │  confidence_interval_low    ││
-│   │                 │  │                 │  │  confidence_interval_high   ││
-│   │  Partition:     │  │  Partition:     │  │                               ││
-│   │  time_bucket    │  │  time_bucket    │  │                               ││
-│   │  (1 day)        │  │  (1 hour)       │  │                               ││
-│   └─────────────────┘  └─────────────────┘  └─────────────────────────────┘│
+│   ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────────┐ │
+│   │  alert_data     │  │ sentiment_data  │  │  prediction_data            │ │
+│   │  ────────────── │  │  ────────────── │  │  ─────────────────────────  │ │
+│   │  timestamp (PK) │  │  timestamp (PK) │  │  timestamp (PK)             │ │
+│   │  pair           │  │  crypto_symbol  │  │  crypto_symbol              │ │
+│   │  last_price     │  │  sentiment_score│  │  predicted_price            │ │
+│   │  change_percent │  │  sentiment_label│  │  actual_price               │ │
+│   │  threshold      │  │  source         │  │  model_name                 │ │
+│   │  alert_type     │  │  confidence     │  │  confidence_interval_low    │ │
+│   │                 │  │                 │  │  confidence_interval_high   │ │
+│   │  Partition:     │  │  Partition:     │  │                             │ │
+│   │  time_bucket    │  │  time_bucket    │  │                             │ │
+│   │  (1 day)        │  │  (1 hour)       │  │                             │ │
+│   └─────────────────┘  └─────────────────┘  └─────────────────────────────┘ │
 │                                                                             │
 │   INDEXES:                                                                  │
-│   • timestamp DESC (BRIN) - efficace pour time-series                     │
+│   • timestamp DESC (BRIN) - efficace pour time-series                       │
 │   • crypto_symbol (BTREE) - recherche rapide par crypto                     │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
                                          │
                                          ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         DJANGO API LAYER                                  │
+│                         DJANGO API LAYER                                    │
 │                    (Django 4.2 + Django REST Framework)                     │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
@@ -197,13 +197,13 @@ L'architecture CRYPTO VIZ suit un pattern **Lambda simplifié** avec les couches
 │   │                                                                     │   │
 │   │  class TimescaleClient:                                             │   │
 │   │      def query_sentiment_historique(self, crypto, periode):         │   │
-│   │          # SQL optimisé TimescaleDB                                  │   │
+│   │          # SQL optimisé TimescaleDB                                 │   │
 │   │          sql = """                                                  │   │
-│   │              SELECT time_bucket('1 hour', timestamp) as bucket,    │   │
-│   │                     AVG(sentiment_score) as avg_score                │   │
-│   │              FROM sentiment_data                                     │   │
-│   │              WHERE crypto_symbol = %s                                │   │
-│   │                AND timestamp > NOW() - INTERVAL %s                 │   │
+│   │              SELECT time_bucket('1 hour', timestamp) as bucket,     │   │
+│   │                     AVG(sentiment_score) as avg_score               │   │
+│   │              FROM sentiment_data                                    │   │
+│   │              WHERE crypto_symbol = %s                               │   │
+│   │                AND timestamp > NOW() - INTERVAL %s                  │   │
 │   │              GROUP BY bucket                                        │   │
 │   │              ORDER BY bucket DESC                                   │   │
 │   │          """                                                        │   │
@@ -211,7 +211,7 @@ L'architecture CRYPTO VIZ suit un pattern **Lambda simplifié** avec les couches
 │   └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
-
+```
 ## Flux de données détaillé
 
 ### 1. Article RSS → Sentiment
@@ -270,7 +270,6 @@ CoinDesk RSS
 │                 │ ◀── time_bucket query
 └─────────────────┘
 ```
-
 ### 2. Prix Kraken → Prédiction
 
 ```

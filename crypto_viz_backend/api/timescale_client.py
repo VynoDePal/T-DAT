@@ -81,7 +81,7 @@ class TimescaleDBClient:
                 source,
                 confidence
             FROM sentiment_data
-            WHERE crypto_symbol = %s
+            WHERE LOWER(crypto_symbol) = LOWER(%s)
         """
         
         params = [crypto_symbol]
@@ -129,7 +129,7 @@ class TimescaleDBClient:
                 confidence_interval_low,
                 confidence_interval_high
             FROM prediction_data
-            WHERE crypto_symbol = %s
+            WHERE LOWER(crypto_symbol) = LOWER(%s)
         """
         
         params = [crypto_symbol]
@@ -153,7 +153,7 @@ class TimescaleDBClient:
         
         return self.execute_query(query, params)
     
-    def get_ticker_history(self, pair, period='24h', start_date=None, end_date=None):
+    def get_ticker_history(self, pair=None, period='24h', start_date=None, end_date=None):
         """Récupère l'historique des tickers."""
         query = """
             SELECT 
@@ -164,10 +164,14 @@ class TimescaleDBClient:
                 ask,
                 volume_24h
             FROM ticker_data
-            WHERE pair = %s
+            WHERE 1=1
         """
         
-        params = [pair]
+        params = []
+        
+        if pair:
+            query += " AND UPPER(pair) = UPPER(%s)"
+            params.append(pair)
         
         if start_date and end_date:
             query += " AND timestamp BETWEEN %s AND %s"
@@ -188,7 +192,7 @@ class TimescaleDBClient:
         
         return self.execute_query(query, params)
     
-    def get_trade_history(self, pair, period='24h', start_date=None, end_date=None):
+    def get_trade_history(self, pair=None, period='24h', start_date=None, end_date=None):
         """Récupère l'historique des trades."""
         query = """
             SELECT 
@@ -198,10 +202,14 @@ class TimescaleDBClient:
                 volume,
                 side
             FROM trade_data
-            WHERE pair = %s
+            WHERE 1=1
         """
         
-        params = [pair]
+        params = []
+        
+        if pair:
+            query += " AND UPPER(pair) = UPPER(%s)"
+            params.append(pair)
         
         if start_date and end_date:
             query += " AND timestamp BETWEEN %s AND %s"
@@ -302,6 +310,47 @@ class TimescaleDBClient:
         query += " ORDER BY timestamp DESC LIMIT 500"
         
         return self.execute_query(query, params)
+
+    def get_available_cryptos(self):
+        """
+        Récupère la liste de toutes les cryptos disponibles dans la base.
+        Combine les données de ticker, sentiment et prediction.
+        """
+        query = """
+            SELECT DISTINCT 'ticker' as data_type, pair as symbol, 
+                   COUNT(*) as count, MAX(timestamp) as last_update
+            FROM ticker_data
+            GROUP BY pair
+            UNION ALL
+            SELECT DISTINCT 'trade' as data_type, pair as symbol,
+                   COUNT(*) as count, MAX(timestamp) as last_update
+            FROM trade_data
+            GROUP BY pair
+            UNION ALL
+            SELECT DISTINCT 'sentiment' as data_type, crypto_symbol as symbol,
+                   COUNT(*) as count, MAX(timestamp) as last_update
+            FROM sentiment_data
+            GROUP BY crypto_symbol
+            UNION ALL
+            SELECT DISTINCT 'prediction' as data_type, crypto_symbol as symbol,
+                   COUNT(*) as count, MAX(timestamp) as last_update
+            FROM prediction_data
+            GROUP BY crypto_symbol
+            ORDER BY data_type, symbol
+        """
+        return self.execute_query(query)
+
+    def get_trading_pairs(self):
+        """Récupère la liste des paires de trading disponibles."""
+        query = """
+            SELECT DISTINCT pair, 
+                   COUNT(*) as ticker_count,
+                   MAX(timestamp) as last_update
+            FROM ticker_data
+            GROUP BY pair
+            ORDER BY pair
+        """
+        return self.execute_query(query)
 
 
 # Instance globale du client

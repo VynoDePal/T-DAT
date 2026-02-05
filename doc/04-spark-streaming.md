@@ -5,40 +5,40 @@
 Apache Spark Structured Streaming est la couche de **traitement temps réel** du pipeline CRYPTO VIZ. Il consomme les messages Kafka, les transforme et les écrit dans TimescaleDB.
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                    SPARK STRUCTURED STREAMING                           │
-│                           (Apache Spark 3.5.0)                          │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
+┌───────────────────────────────────────────────────────────────────────┐
+│                    SPARK STRUCTURED STREAMING                         │
+│                           (Apache Spark 3.5.0)                        │
+├───────────────────────────────────────────────────────────────────────┤
+│                                                                       │
 │   ┌─────────────────────────────┐   ┌─────────────────────────────┐   │
 │   │    JOB 1: INGESTION         │   │    JOB 2: ANALYTICS         │   │
-│   │    kafka_to_timescale.py    │   │    sentiment_prediction.py    │   │
+│   │    kafka_to_timescale.py    │   │    sentiment_prediction.py  │   │
 │   │                             │   │                             │   │
-│   │  4 Streams parallèles:      │   │  2 Streams analytiques:       │   │
-│   │  ┌─────────────────────┐    │   │  ┌─────────────────────┐      │   │
-│   │  │ rawarticle Stream   │    │   │  │ Sentiment Stream    │      │   │
-│   │  │ ├─ from_json        │    │   │  │ ├─ from_json        │      │   │
-│   │  │ ├─ nested extract     │──┐ │   │  │ ├─ explode(cryptos) │      │   │
-│   │  │ └─ JDBC write         │  │ │   │  │ ├─ window(3m)       │      │   │
-│   │  │                       │  │ │   │  │ ├─ agg(avg(score))  │      │   │
-│   │  │ rawticker Stream      │  │ │   │  │ └─ JDBC write       │      │   │
-│   │  │ ├─ from_json          │  │ │   │  └─────────────────────┘      │   │
-│   │  │ ├─ timestamp conv     │─┐│ │   │                               │   │
-│   │  │ └─ JDBC write         │ ││ │   │  ┌─────────────────────┐      │   │
-│   │  │                       │ ││ │   │  │ Prediction Stream   │      │   │
-│   │  │ rawtrade Stream       │ ││ │   │  │ ├─ from_json        │      │   │
-│   │  │ ├─ from_json          │─┼┘ │   │  │ ├─ window(3m,30s)   │      │   │
-│   │  │ └─ JDBC write         │ │  │   │  │ ├─ agg(avg,stddev)  │      │   │
-│   │  │                       │ │  │   │  │ └─ JDBC write       │      │   │
-│   │  │ rawalert Stream       │ │  │   │  └─────────────────────┘      │   │
-│   │  │ └─ JDBC write         │─┘  │   │                               │   │
-│   │  └─────────────────────┘     │   └─────────────────────────────┘   │
-│   │                              │                                         │
-│   │  Checkpoint: /tmp/spark_checkpoints/{topic}/                        │
-│   │                              │                                         │
-│   └─────────────────────────────┘                                         │
-│                                                                           │
-└───────────────────────────────────────────────────────────────────────────┘
+│   │  4 Streams parallèles:      │   │  2 Streams analytiques:     │   │
+│   │  ┌─────────────────────┐    │   │  ┌─────────────────────┐    │   │
+│   │  │ rawarticle Stream   │    │   │  │ Sentiment Stream    │    │   │
+│   │  │ ├─ from_json        │    │   │  │ ├─ from_json        │    │   │
+│   │  │ ├─ nested extract   │──┐ │   │  │ ├─ explode(cryptos) │    │   │
+│   │  │ └─ JDBC write       │  │ │   │  │ ├─ window(3m)       │    │   │
+│   │  │                     │  │ │   │  │ ├─ agg(avg(score))  │    │   │
+│   │  │ rawticker Stream    │  │ │   │  │ └─ JDBC write       │    │   │
+│   │  │ ├─ from_json        │  │ │   │  └─────────────────────┘    │   │
+│   │  │ ├─ timestamp conv   │─┐│ │   │                             │   │
+│   │  │ └─ JDBC write       │ ││ │   │  ┌─────────────────────┐    │   │
+│   │  │                     │ ││ │   │  │ Prediction Stream   │    │   │
+│   │  │ rawtrade Stream     │ ││ │   │  │ ├─ from_json        │    │   │
+│   │  │ ├─ from_json        │─┼┘ │   │  │ ├─ window(3m,30s)   │    │   │
+│   │  │ └─ JDBC write       │ │  │   │  │ ├─ agg(avg,stddev)  │    │   │
+│   │  │                     │ │  │   │  │ └─ JDBC write       │    │   │
+│   │  │ rawalert Stream     │ │  │   │  └─────────────────────┘    │   │
+│   │  │ └─ JDBC write       │─┘  │   │                             │   │
+│   │  └─────────────────────┘    │   └─────────────────────────────┘   │
+│   │                             │                                     │
+│   │  Checkpoint: /tmp/spark_checkpoints/{topic}/                      │
+│   │                             │                                     │
+│   └─────────────────────────────┘                                     │
+│                                                                       │
+└───────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Architecture Spark
@@ -384,14 +384,14 @@ def process_price_predictions(spark):
 │                         WATERMARK EXPLAINED                             │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
-│  Event Time:    T1────T2────T3────T4────T5────T6────T7────T8           │
-│                   │     │     │     │     │     │     │     │            │
-│  Watermark:     └─────┴─────┴─────┴─────┴─────┴─────┴─────┘            │
+│  Event Time:    T1────T2────T3────T4────T5────T6────T7────T8            │
+│                 │     │     │     │     │     │     │     │             │
+│  Watermark:     └─────┴─────┴─────┴─────┴─────┴─────┴─────┘             │
 │                    <────── 2 minutes delay ──────>                      │
 │                                                                         │
-│  À T=15:00:00, le watermark est à 14:58:00                            │
-│  → Données arrivant avant 14:58:00 sont ignorées                      │
-│  → Permet de gérer le retard sans attendre indéfiniment                │
+│  À T=15:00:00, le watermark est à 14:58:00                              │
+│  → Données arrivant avant 14:58:00 sont ignorées                        │
+│  → Permet de gérer le retard sans attendre indéfiniment                 │
 │                                                                         │
 │  Code: .withWatermark("timestamp", "2 minutes")                         │
 │                                                                         │

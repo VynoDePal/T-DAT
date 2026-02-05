@@ -16,32 +16,32 @@ Les **Data Producers** sont la couche d'ingestion initiale du pipeline CRYPTO VI
 ### 1.1 Architecture du composant
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     ARTICLE SCRAPER                            │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │ RSS Sources  │  │   Parsing    │  │  Enrichment  │          │
-│  │              │  │              │  │              │          │
-│  │ • CoinDesk   │  │ feedparser   │  │ • Content    │          │
-│  │ • Cointele   │  │              │  │   extract    │          │
-│  │ • Decrypt    │──┼──────────────┼──▶│ • Sentiment  │          │
-│  │ • CryptoSlate│  │ BeautifulSoup│  │   analysis   │          │
-│  │ • BitcoinMag │  │              │  │ • Crypto tags│          │
-│  └──────────────┘  └──────────────┘  └──────────────┘          │
-│          │                                    │                 │
-│          │    ┌───────────────────────────────┘                 │
-│          │    │                                                 │
-│          ▼    ▼                                                 │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │                    Kafka Producer                            ││
-│  │  • Topic: rawarticle                                         ││
-│  │  • Key: source_name (ex: "CoinDesk")                         ││
-│  │  • Value: JSON payload                                       ││
-│  │  • Compression: LZ4                                          ││
-│  └─────────────────────────────────────────────────────────────┘│
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────┐
+│                     ARTICLE SCRAPER                               │
+├───────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐             │
+│  │ RSS Sources  │  │   Parsing    │  │  Enrichment  │             │
+│  │              │  │              │  │              │             │
+│  │ • CoinDesk   │  │ feedparser   │  │ • Content    │             │
+│  │ • Cointele   │  │              │  │   extract    │             │
+│  │ • Decrypt    │──┼──────────────┼─▶│ • Sentiment  │             │
+│  │ • CryptoSlate│  │ BeautifulSoup│  │   analysis   │             │
+│  │ • BitcoinMag │  │              │  │ • Crypto tags│             │
+│  └──────────────┘  └──────────────┘  └──────────────┘             │
+│          │                                    │                   │
+│          │    ┌───────────────────────────────┘                   │
+│          │    │                                                   │
+│          ▼    ▼                                                   │
+│  ┌─────────────────────────────────────────────────────────────┐  │
+│  │                    Kafka Producer                           │  │
+│  │  • Topic: rawarticle                                        │  │
+│  │  • Key: source_name (ex: "CoinDesk")                        │  │
+│  │  • Value: JSON payload                                      │  │
+│  │  • Compression: LZ4                                         │  │
+│  └─────────────────────────────────────────────────────────────┘  │
+│                                                                   │
+└───────────────────────────────────────────────────────────────────┘
 ```
 
 ### 1.2 Flux d'exécution détaillé
@@ -244,38 +244,38 @@ def extract_article_content(url, timeout=10):
 ### 2.1 Architecture du composant
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     KRAKEN PRODUCER                              │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐│
-│  │  WebSocket       │  │  Message Parser  │  │  Alert Detector  ││
-│  │  Connection      │  │                  │  │                  ││
-│  │                  │  │ • ticker: price  │  │ price_change     ││
-│  │ wss://ws.kraken  │──▶│   volume         │──▶│ > threshold?    ││
-│  │ .com             │  │ • trade: vol     │  │   (0.5%)        ││
-│  │                  │  │   side           │  │                  ││
-│  │ Subscriptions:   │  │ • heartbeat      │  │ → rawalert       ││
-│  │ • ticker         │  │ • status         │  │                  ││
-│  │ • trade          │  │                  │  │                  ││
-│  └──────────────────┘  └──────────────────┘  └──────────────────┘│
-│           │                     │                     │          │
-│           │    ┌────────────────┴─────────────────────┘          │
-│           │    │                                               │
-│           ▼    ▼                                               │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │                    Kafka Producer                          ││
-│  │                                                             ││
-│  │  Topics:                                                    ││
-│  │  • rawticker  → Ticker data (prix temps réel)              ││
-│  │  • rawtrade   → Trade data (transactions)                  ││
-│  │  • rawalert   → Price alerts (changements >0.5%)          ││
-│  │                                                             ││
-│  │  Keys: pair (XBT/USD)                                       ││
-│  │  Compression: LZ4                                           ││
-│  └─────────────────────────────────────────────────────────────┘│
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────┐
+│                     KRAKEN PRODUCER                               │
+├───────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐ │
+│  │  WebSocket       │  │  Message Parser  │  │  Alert Detector  │ │
+│  │  Connection      │  │                  │  │                  │ │
+│  │                  │  │ • ticker: price  │  │ price_change     │ │
+│  │ wss://ws.kraken  │─▶│   volume         │─▶│ > threshold?     │ │
+│  │ .com             │  │ • trade: vol     │  │   (0.5%)         │ │
+│  │                  │  │   side           │  │                  │ │
+│  │ Subscriptions:   │  │ • heartbeat      │  │ → rawalert       │ │
+│  │ • ticker         │  │ • status         │  │                  │ │
+│  │ • trade          │  │                  │  │                  │ │
+│  └──────────────────┘  └──────────────────┘  └──────────────────┘ │
+│           │                     │                     │           │
+│           │    ┌────────────────┴─────────────────────┘           │
+│           │    │                                                  │
+│           ▼    ▼                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐  │
+│  │                    Kafka Producer                           │  │
+│  │                                                             │  │
+│  │  Topics:                                                    │  │
+│  │  • rawticker  → Ticker data (prix temps réel)               │  │
+│  │  • rawtrade   → Trade data (transactions)                   │  │
+│  │  • rawalert   → Price alerts (changements >0.5%)            │  │
+│  │                                                             │  │
+│  │  Keys: pair (XBT/USD)                                       │  │
+│  │  Compression: LZ4                                           │  │
+│  └─────────────────────────────────────────────────────────────┘  │
+│                                                                   │
+└───────────────────────────────────────────────────────────────────┘
 ```
 
 ### 2.2 Flux d'exécution détaillé

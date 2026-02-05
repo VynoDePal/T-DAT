@@ -6,13 +6,13 @@ Ce guide explique comment déployer la plateforme CRYPTO VIZ, de l'infrastructur
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                    DÉPLOIEMENT CRYPTO VIZ                                 │
+│                    DÉPLOIEMENT CRYPTO VIZ                               │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
 │   PHASE 1: INFRASTRUCTURE (Docker)                                      │
 │   ┌─────────────────────────────────────────────────────────────────┐   │
 │   │  docker-compose up -d                                           │   │
-│   │                                                                   │   │
+│   │                                                                 │   │
 │   │  Services démarrés:                                             │   │
 │   │  ✓ Kafka (9092, 29092)                                          │   │
 │   │  ✓ TimescaleDB (15432)                                          │   │
@@ -49,9 +49,9 @@ Ce guide explique comment déployer la plateforme CRYPTO VIZ, de l'infrastructur
 │                              ▼                                          │
 │   PHASE 5: VÉRIFICATION FINALE                                          │
 │   ┌─────────────────────────────────────────────────────────────────┐   │
-│   │  • Test API endpoints                                             │   │
+│   │  • Test API endpoints                                           │   │
 │   │  • Vérification données dans TimescaleDB                        │   │
-│   │  • Dashboards Grafana                                             │   │
+│   │  • Dashboards Grafana                                           │   │
 │   └─────────────────────────────────────────────────────────────────┘   │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘

@@ -16,19 +16,19 @@
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────┐
 │                                    SOURCES DE DONNÉES                                   │
-├─────────────────────────┬─────────────────────────────────────────────────────────────────┤
-│  Flux RSS Crypto        │  WebSocket Kraken API                                          │
-│  • CoinDesk             │  • BTC/USD, ETH/USD, SOL/USD...                                │
-│  • Cointelegraph        │  • Ticker (prix temps réel)                                    │
-│  • Decrypt              │  • Trade (transactions)                                        │
-│  • CryptoSlate          │  • Alertes (changements >0.5%)                                 │
-│  • Bitcoin Magazine     │                                                                │
+├─────────────────────────┬───────────────────────────────────────────────────────────────┤
+│  Flux RSS Crypto        │  WebSocket Kraken API                                         │
+│  • CoinDesk             │  • BTC/USD, ETH/USD, SOL/USD...                               │
+│  • Cointelegraph        │  • Ticker (prix temps réel)                                   │
+│  • Decrypt              │  • Trade (transactions)                                       │
+│  • CryptoSlate          │  • Alertes (changements >0.5%)                                │
+│  • Bitcoin Magazine     │                                                               │
 └───────────┬─────────────┴──────────────────────────────┬────────────────────────────────┘
             │                                            │
             ▼                                            ▼
 ┌─────────────────────────┐                  ┌─────────────────────────┐
 │   Article Scraper       │                  │   Kraken Producer       │
-│   (Python + TextBlob)     │                  │   (Python WebSocket)    │
+│   (Python + TextBlob)   │                  │   (Python WebSocket)    │
 │                         │                  │                         │
 │  • Parse RSS toutes les │                  │  • Connexion persistante│
 │    5 minutes            │                  │  • Parse ticker/trade   │
@@ -39,84 +39,84 @@
             │    ┌───────────────────────────────────────┘
             │    │
             ▼    ▼
-┌─────────────────────────────────────────────────────────────────────┐
+┌───────────────────────────────────────────────────────────────────────┐
 │                         APACHE KAFKA 4.1.1                            │
 │                    (Mode KRaft - Sans ZooKeeper)                      │
 ├─────────────────┬─────────────────┬─────────────────┬─────────────────┤
 │   rawarticle    │   rawticker     │   rawtrade      │    rawalert     │
 │   (JSON)        │   (JSON)        │   (JSON)        │    (JSON)       │
 │                 │                 │                 │                 │
-│ Articles avec   │ Prix temps réel │ Transactions    │ Alertes prix  │
-│ sentiment       │ par crypto      │ individuelles   │ significatifs │
+│ Articles avec   │ Prix temps réel │ Transactions    │ Alertes prix    │
+│ sentiment       │ par crypto      │ individuelles   │ significatifs   │
 └────────┬────────┴────────┬────────┴────────┬────────┴────────┬────────┘
          │                 │                 │                  │
          ▼                 ▼                 ▼                  ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│              APACHE SPARK STRUCTURED STREAMING                        │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ┌──────────────────────────┐    ┌──────────────────────────────┐ │
-│  │  JOB 1: INGESTION        │    │  JOB 2: ANALYTICS            │ │
-│  │  kafka_to_timescale.py   │    │  sentiment_prediction_job.py │ │
-│  │                          │    │                              │ │
-│  │  4 streams parallèles:   │    │  2 streams analytiques:      │ │
-│  │  • rawarticle → article_ │    │  • rawarticle → sentiment_   │ │
-│  │    data                  │    │    data (agrégé)             │ │
-│  │  • rawticker → ticker_   │    │  • rawticker → prediction_   │ │
-│  │    data                  │    │    data (prédictions)        │ │
-│  │  • rawtrade → trade_     │    │                              │ │
-│  │    data                  │    │  Windowing 3 minutes +       │ │
-│  │  • rawalert → alert_     │    │  watermarking 2 minutes      │ │
-│  │    data                  │    │                              │ │
-│  │                          │    │                              │ │
-│  │  Transformation:       │    │  Agrégations:                │ │
-│  │  JSON parse → struct     │    │  • AVG(sentiment_score)      │ │
-│  │  Timestamp conversion    │    │  • STDEV(price)              │ │
-│  │  Nested field extract    │    │  • Moving average trends     │ │
-│  │                          │    │                              │ │
-│  │  Écriture: foreachBatch  │    │  Classification:             │ │
-│  │  + JDBC append mode      │    │  >0.6 = positive             │ │
-│  │                          │    │  <0.4 = negative             │ │
-│  │                          │    │  else = neutral              │ │
-│  └──────────┬───────────────┘    └──────────────┬───────────────┘ │
+┌────────────────────────────────────────────────────────────────────┐
+│              APACHE SPARK STRUCTURED STREAMING                     │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│  ┌──────────────────────────┐    ┌──────────────────────────────┐  │
+│  │  JOB 1: INGESTION        │    │  JOB 2: ANALYTICS            │  │
+│  │  kafka_to_timescale.py   │    │  sentiment_prediction_job.py │  │
+│  │                          │    │                              │  │
+│  │  4 streams parallèles:   │    │  2 streams analytiques:      │  │
+│  │  • rawarticle → article_ │    │  • rawarticle → sentiment_   │  │
+│  │    data                  │    │    data (agrégé)             │  │
+│  │  • rawticker → ticker_   │    │  • rawticker → prediction_   │  │
+│  │    data                  │    │    data (prédictions)        │  │
+│  │  • rawtrade → trade_     │    │                              │  │
+│  │    data                  │    │  Windowing 3 minutes +       │  │
+│  │  • rawalert → alert_     │    │  watermarking 2 minutes      │  │
+│  │    data                  │    │                              │  │
+│  │                          │    │                              │  │
+│  │  Transformation:         │    │  Agrégations:                │  │
+│  │  JSON parse → struct     │    │  • AVG(sentiment_score)      │  │
+│  │  Timestamp conversion    │    │  • STDEV(price)              │  │
+│  │  Nested field extract    │    │  • Moving average trends     │  │
+│  │                          │    │                              │  │
+│  │  Écriture: foreachBatch  │    │  Classification:             │  │
+│  │  + JDBC append mode      │    │  >0.6 = positive             │  │
+│  │                          │    │  <0.4 = negative             │  │
+│  │                          │    │  else = neutral              │  │
+│  └──────────┬───────────────┘    └──────────────┬───────────────┘  │
 │             │                                    │                 │
 └─────────────┼────────────────────────────────────┼─────────────────┘
               │                                    │
               ▼                                    ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                    TIMESCALEDB (PostgreSQL 18)                        │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│   TABLES HYPERTABLES (Séries temporelles partitionnées)             │
-│                                                                     │
-│   ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────┐ │
-│   │ ticker_data     │  │ trade_data      │  │ article_data        │ │
-│   ├─────────────────┤  ├─────────────────┤  ├─────────────────────┤ │
-│   │ timestamp       │  │ timestamp       │  │ timestamp           │ │
-│   │ pair            │  │ pair            │  │ article_id            │ │
-│   │ last            │  │ price           │  │ title                 │ │
-│   │ bid             │  │ volume          │  │ url                   │ │
-│   │ ask             │  │ side            │  │ website               │ │
-│   │ volume_24h      │  │                 │  │ summary               │ │
-│   │                 │  │                 │  │ cryptocurrencies_     │ │
-│   │                 │  │                 │  │   mentioned           │ │
-│   │                 │  │                 │  │ sentiment_score       │ │
-│   │                 │  │                 │  │ sentiment_label       │ │
-│   └─────────────────┘  └─────────────────┘  └─────────────────────┘ │
-│                                                                     │
-│   ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────┐ │
-│   │ alert_data      │  │ sentiment_data  │  │ prediction_data     │ │
-│   ├─────────────────┤  ├─────────────────┤  ├─────────────────────┤ │
-│   │ timestamp       │  │ timestamp       │  │ timestamp           │ │
-│   │ pair            │  │ crypto_symbol   │  │ crypto_symbol         │ │
-│   │ last_price      │  │ sentiment_score │  │ predicted_price       │ │
-│   │ change_percent  │  │ sentiment_label │  │ actual_price          │ │
-│   │ threshold       │  │ source          │  │ model_name            │ │
-│   │ alert_type      │  │ confidence      │  │ confidence_interval_  │ │
-│   │                 │  │                 │  │   low/high            │ │
-│   └─────────────────┘  └─────────────────┘  └─────────────────────┘ │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│                    TIMESCALEDB (PostgreSQL 18)                         │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                        │
+│   TABLES HYPERTABLES (Séries temporelles partitionnées)                │
+│                                                                        │
+│   ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────┐    │
+│   │ ticker_data     │  │ trade_data      │  │ article_data        │    │
+│   ├─────────────────┤  ├─────────────────┤  ├─────────────────────┤    │
+│   │ timestamp       │  │ timestamp       │  │ timestamp           │    │
+│   │ pair            │  │ pair            │  │ article_id          │    │
+│   │ last            │  │ price           │  │ title               │    │
+│   │ bid             │  │ volume          │  │ url                 │    │
+│   │ ask             │  │ side            │  │ website             │    │
+│   │ volume_24h      │  │                 │  │ summary             │    │
+│   │                 │  │                 │  │ cryptocurrencies_   │    │
+│   │                 │  │                 │  │   mentioned         │    │
+│   │                 │  │                 │  │ sentiment_score     │    │
+│   │                 │  │                 │  │ sentiment_label     │    │
+│   └─────────────────┘  └─────────────────┘  └─────────────────────┘    │
+│                                                                        │
+│   ┌─────────────────┐  ┌─────────────────┐  ┌──────────────────────┐   │
+│   │ alert_data      │  │ sentiment_data  │  │ prediction_data      │   │
+│   ├─────────────────┤  ├─────────────────┤  ├──────────────────────┤   │
+│   │ timestamp       │  │ timestamp       │  │ timestamp            │   │
+│   │ pair            │  │ crypto_symbol   │  │ crypto_symbol        │   │
+│   │ last_price      │  │ sentiment_score │  │ predicted_price      │   │
+│   │ change_percent  │  │ sentiment_label │  │ actual_price         │   │
+│   │ threshold       │  │ source          │  │ model_name           │   │
+│   │ alert_type      │  │ confidence      │  │ confidence_interval_ │   │
+│   │                 │  │                 │  │   low/high           │   │
+│   └─────────────────┘  └─────────────────┘  └──────────────────────┘   │
+│                                                                        │
+└────────────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -126,19 +126,19 @@
 │   ENDPOINTS PRINCIPAUX:                                             │
 │                                                                     │
 │   GET /api/v1/sentiment/{crypto}/historique/?periode=7d             │
-│   → Historique sentiment agrégé par time_bucket                   │
+│   → Historique sentiment agrégé par time_bucket                     │
 │                                                                     │
 │   GET /api/v1/prix/{crypto}/historique/                             │
-│   → Historique des prix                                           │
+│   → Historique des prix                                             │
 │                                                                     │
 │   GET /api/v1/prix/{crypto}/temps_reel/                             │
-│   → Dernier prix connu                                             │
+│   → Dernier prix connu                                              │
 │                                                                     │
 │   GET /api/v1/predictions/{crypto}/                                 │
-│   → Prédictions avec métriques de confiance                       │
+│   → Prédictions avec métriques de confiance                         │
 │                                                                     │
 │   GET /api/v1/articles/{crypto}/                                    │
-│   → Articles liés à une crypto                                    │
+│   → Articles liés à une crypto                                      │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
                               │

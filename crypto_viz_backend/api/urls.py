@@ -14,6 +14,7 @@ from .views import (
     ArticleHistoryView,
     AlertHistoryView,
     health_check,
+    list_cryptos,
 )
 
 # Router pour les ViewSets
@@ -24,6 +25,9 @@ router.register(r'config/visualization', VisualizationParameterViewSet, basename
 urlpatterns = [
     # Health check
     path('health/', health_check, name='health-check'),
+    
+    # Liste des cryptos disponibles
+    path('cryptos/', list_cryptos, name='list-cryptos'),
     
     # APIs pour données historiques depuis TimescaleDB
     path('sentiment/<str:crypto_symbol>/historique/', 
