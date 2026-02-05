@@ -40,7 +40,7 @@ kraken_top8_pairs = [
 ]
 
 last_prices = {}
-PRICE_CHANGE_THRESHOLD = 1.0
+PRICE_CHANGE_THRESHOLD = 0.5
 
 def delivery_report(err, msg):
     """Callback pour les confirmations de livraison."""

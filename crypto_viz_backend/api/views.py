@@ -83,10 +83,6 @@ DATE_DEBUT_PARAMETER = OpenApiParameter(
 - `2024-01-15T10:30:00+01:00`
 
 ⚠️ Doit être utilisé avec `date_fin`. Si fourni, le paramètre `periode` est ignoré.''',
-    examples=[
-        OpenApiExample('Début janvier 2024', value='2024-01-01T00:00:00Z'),
-        OpenApiExample('15 janvier 2024 10h30', value='2024-01-15T10:30:00Z'),
-    ]
 )
 
 DATE_FIN_PARAMETER = OpenApiParameter(
@@ -99,10 +95,6 @@ DATE_FIN_PARAMETER = OpenApiParameter(
 **Format:** `YYYY-MM-DDTHH:MM:SSZ` ou `YYYY-MM-DDTHH:MM:SS+HH:MM`
 
 ⚠️ Doit être utilisé avec `date_debut`. Si fourni, le paramètre `periode` est ignoré.''',
-    examples=[
-        OpenApiExample('Fin janvier 2024', value='2024-01-31T23:59:59Z'),
-        OpenApiExample('15 janvier 2024 18h00', value='2024-01-15T18:00:00Z'),
-    ]
 )
 
 
@@ -612,9 +604,9 @@ Le spread (ask - bid) indique la liquidité du marché:
             OpenApiParameter(
                 name='pair',
                 type=OpenApiTypes.STR,
-                location=OpenApiParameter.PATH,
-                required=True,
-                description='Paire de trading (ex: XBT/USD, ETH/USD). Note: utilisez XBT pour Bitcoin.',
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description='Paire de trading (ex: XBT/USD, ETH/USD). Note: utilisez XBT pour Bitcoin. Si non fourni, retourne toutes les paires.',
                 examples=[
                     OpenApiExample('Bitcoin', value='XBT/USD'),
                     OpenApiExample('Ethereum', value='ETH/USD'),
@@ -630,9 +622,10 @@ Le spread (ask - bid) indique la liquidité du marché:
             500: ErrorResponseSerializer,
         },
     )
-    def get(self, request, pair):
+    def get(self, request):
         """Récupère l'historique des tickers pour une paire."""
         try:
+            pair = request.query_params.get('pair')
             period = request.query_params.get('periode', '24h')
             start_date = request.query_params.get('date_debut')
             end_date = request.query_params.get('date_fin')
@@ -652,7 +645,7 @@ Le spread (ask - bid) indique la liquidité du marché:
             serializer = TickerDataSerializer(data, many=True)
             
             return Response({
-                'pair': pair.upper(),
+                'pair': pair.upper() if pair else 'ALL',
                 'count': len(data),
                 'data': serializer.data
             })
@@ -722,9 +715,9 @@ data.data.forEach(trade => {
             OpenApiParameter(
                 name='pair',
                 type=OpenApiTypes.STR,
-                location=OpenApiParameter.PATH,
-                required=True,
-                description='Paire de trading (ex: XBT/USD, ETH/USD)',
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description='Paire de trading (ex: XBT/USD, ETH/USD). Si non fourni, retourne toutes les paires.',
                 examples=[
                     OpenApiExample('Bitcoin', value='XBT/USD'),
                     OpenApiExample('Ethereum', value='ETH/USD'),
@@ -739,9 +732,10 @@ data.data.forEach(trade => {
             500: ErrorResponseSerializer,
         },
     )
-    def get(self, request, pair):
+    def get(self, request):
         """Récupère l'historique des trades pour une paire."""
         try:
+            pair = request.query_params.get('pair')
             period = request.query_params.get('periode', '24h')
             start_date = request.query_params.get('date_debut')
             end_date = request.query_params.get('date_fin')
@@ -761,7 +755,7 @@ data.data.forEach(trade => {
             serializer = TradeDataSerializer(data, many=True)
             
             return Response({
-                'pair': pair.upper(),
+                'pair': pair.upper() if pair else 'ALL',
                 'count': len(data),
                 'data': serializer.data
             })

@@ -1,7 +1,7 @@
 """
 URLs pour l'API CRYPTO VIZ.
 """
-from django.urls import path, include
+from django.urls import path, include, re_path
 from rest_framework.routers import DefaultRouter
 
 from .views import (
@@ -34,11 +34,11 @@ urlpatterns = [
          PredictionHistoryView.as_view(), 
          name='prediction-history'),
     
-    path('ticker/<str:pair>/historique/', 
+    path('ticker/historique/', 
          TickerHistoryView.as_view(), 
          name='ticker-history'),
     
-    path('trade/<str:pair>/historique/', 
+    path('trade/historique/', 
          TradeHistoryView.as_view(), 
          name='trade-history'),
     

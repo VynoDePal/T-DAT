@@ -9,7 +9,7 @@ from django.contrib.auth.models import User
 
 class CryptoConfiguration(models.Model):
     """Configuration des crypto-monnaies suivies."""
-    symbol = models.CharField(max_length=10, unique=True, help_text="Ex: BTC, ETH")
+    symbol = models.CharField(max_length=50, unique=True, help_text="Ex: BTC, ETH")
     name = models.CharField(max_length=100, help_text="Ex: Bitcoin, Ethereum")
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -27,7 +27,7 @@ class VisualizationParameter(models.Model):
     """Paramètres de visualisation sauvegardés par utilisateur."""
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     name = models.CharField(max_length=100)
-    crypto_symbol = models.CharField(max_length=10)
+    crypto_symbol = models.CharField(max_length=50)
     time_range = models.CharField(max_length=20, help_text="Ex: 24h, 7d, 30d")
     chart_type = models.CharField(max_length=50, help_text="Ex: candlestick, line")
     indicators = models.JSONField(default=list, help_text="Liste des indicateurs actifs")

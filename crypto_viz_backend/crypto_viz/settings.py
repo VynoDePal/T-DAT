@@ -363,6 +363,10 @@ Gestion des crypto-monnaies suivies et des paramètres de visualisation.
     # Servers
     'SERVERS': [
         {
+            'url': os.environ.get('API_BASE_URL', 'http://localhost:8000'),
+            'description': 'Serveur API'
+        },
+        {
             'url': 'http://localhost:8000',
             'description': 'Serveur de développement local'
         },

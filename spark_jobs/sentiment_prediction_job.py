@@ -55,7 +55,8 @@ def read_kafka_stream(spark, topic):
         .format("kafka") \
         .option("kafka.bootstrap.servers", config.KAFKA_BOOTSTRAP_SERVERS) \
         .option("subscribe", topic) \
-        .option("startingOffsets", "earliest") \
+        .option("startingOffsets", "latest") \
+        .option("failOnDataLoss", "false") \
         .load()
 
 
@@ -63,6 +64,7 @@ def write_to_timescale(df, table_name, checkpoint_path):
     """Écrit un DataFrame dans TimescaleDB."""
     def write_batch(batch_df, batch_id):
         count = batch_df.count()
+        print(f"[DEBUG] {table_name} - Batch {batch_id}: {count} rows")
         if count > 0:
             batch_df.write \
                 .format("jdbc") \
@@ -110,9 +112,9 @@ def process_sentiment_from_articles(spark):
     
     # Ajouter une fenêtre temporelle pour agréger
     windowed_sentiment = sentiment_df \
-        .withWatermark("timestamp", "10 minutes") \
+        .withWatermark("timestamp", "2 minutes") \
         .groupBy(
-            window(col("timestamp"), "5 minutes"),
+            window(col("timestamp"), "3 minutes"),
             col("crypto_symbol")
         ) \
         .agg(
@@ -153,7 +155,7 @@ def process_price_predictions(spark):
     ticker_df = kafka_df \
         .select(from_json(col("value").cast("string"), schemas.TICKER_SCHEMA).alias("data")) \
         .select("data.*") \
-        .withColumn("timestamp", to_timestamp(col("timestamp") / 1000))
+        .withColumn("timestamp", current_timestamp())
     
     # Extraire le symbole de la crypto depuis la paire (ex: BTC/USD -> BTC)
     ticker_with_crypto = ticker_df \
@@ -161,9 +163,9 @@ def process_price_predictions(spark):
     
     # Créer une fenêtre glissante pour calculer les tendances
     windowed_ticker = ticker_with_crypto \
-        .withWatermark("timestamp", "10 minutes") \
+        .withWatermark("timestamp", "2 minutes") \
         .groupBy(
-            window(col("timestamp"), "5 minutes", "1 minute"),
+            window(col("timestamp"), "3 minutes", "30 seconds"),
             col("crypto_symbol"),
             col("pair")
         ) \
