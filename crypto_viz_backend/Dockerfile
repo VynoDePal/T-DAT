@@ -62,4 +62,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/api/v1/health/ || exit 1
 
 # Run gunicorn with optimized settings
-CMD ["gunicorn", "crypto_viz.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "4", "--worker-class", "gthread", "--worker-tmp-dir", "/dev/shm", "--log-level", "info", "--access-logfile", "-", "--error-logfile", "-"]
+CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "crypto_viz.asgi:application"]
