@@ -35,6 +35,7 @@ from .serializers import (
     AlertHistoryResponseSerializer,
     HealthCheckResponseSerializer,
     ErrorResponseSerializer,
+    WebSocketRedirectSerializer,
 )
 from .timescale_client import timescale_client
 
@@ -45,6 +46,33 @@ logger = logging.getLogger(__name__)
 # Paramètres OpenAPI réutilisables
 # =============================================================================
 
+WS_ENDPOINTS = {
+    'ticker': 'ws://{host}/ws/ticker/<base>/<quote>/',
+    'trade': 'ws://{host}/ws/trade/<base>/<quote>/',
+    'sentiment': 'ws://{host}/ws/sentiment/<symbol>/',
+    'prediction': 'ws://{host}/ws/prediction/<symbol>/',
+    'alert': 'ws://{host}/ws/alert/',
+}
+
+
+def _build_ws_redirect_response(request, ws_path):
+    """Construit la réponse de redirection WebSocket pour periode=live."""
+    host = request.get_host()
+    scheme = 'wss' if request.is_secure() else 'ws'
+    ws_url = f'{scheme}://{host}/{ws_path}'
+    endpoints = {
+        k: v.format(host=host).replace('ws://', f'{scheme}://')
+        for k, v in WS_ENDPOINTS.items()
+    }
+    return Response({
+        'live': True,
+        'message': 'Utilisez le WebSocket pour les données en temps réel',
+        'websocket_url': ws_url,
+        'protocol': 'websocket',
+        'endpoints': endpoints,
+    })
+
+
 PERIOD_PARAMETER = OpenApiParameter(
     name='periode',
     type=OpenApiTypes.STR,
@@ -53,15 +81,28 @@ PERIOD_PARAMETER = OpenApiParameter(
     description='''Période de temps pour filtrer les données.
 
 **Valeurs acceptées:**
+- `live` : ⚡ Temps réel — redirige vers le WebSocket correspondant
+- `1min` : Dernière minute
+- `5min` : 5 dernières minutes
+- `15min` : 15 dernières minutes
+- `30min` : 30 dernières minutes
 - `1h` : Dernière heure
 - `24h` : Dernières 24 heures (défaut)
 - `7d` : 7 derniers jours
 - `30d` : 30 derniers jours
 
-⚠️ Si `date_debut` et `date_fin` sont fournis, ce paramètre est ignoré.''',
-    enum=['1h', '24h', '7d', '30d'],
+⚠️ Si `date_debut` et `date_fin` sont fournis, ce paramètre est ignoré.
+
+🔌 **WebSocket Live:** Quand `live` est sélectionné, la réponse contient l\'URL
+WebSocket à utiliser pour recevoir les données en streaming temps réel.''',
+    enum=['live', '1min', '5min', '15min', '30min', '1h', '24h', '7d', '30d'],
     default='24h',
     examples=[
+        OpenApiExample('Temps réel (WebSocket)', value='live'),
+        OpenApiExample('1 minute', value='1min'),
+        OpenApiExample('5 minutes', value='5min'),
+        OpenApiExample('15 minutes', value='15min'),
+        OpenApiExample('30 minutes', value='30min'),
         OpenApiExample('Dernière heure', value='1h'),
         OpenApiExample('24 heures', value='24h'),
         OpenApiExample('7 jours', value='7d'),
@@ -343,6 +384,22 @@ data.data.forEach(point => {
 | 0.4 - 0.6 | neutral | Sentiment neutre |
 | 0.6 - 1.0 | positive | Sentiment positif (optimisme, FOMO) |
 
+## Mode Live (WebSocket)
+
+Avec `periode=live`, la réponse contient l'URL WebSocket à utiliser :
+```
+ws://<host>/ws/sentiment/<symbol>/
+```
+
+```javascript
+// Connexion WebSocket pour le sentiment en temps réel
+const ws = new WebSocket('ws://localhost:8000/ws/sentiment/BTC/');
+ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    console.log('Sentiment:', data.sentiment_score, data.sentiment_label);
+};
+```
+
 ## Limites
 
 - Maximum 1000 résultats par requête
@@ -402,6 +459,13 @@ data.data.forEach(point => {
         """Récupère l'historique du sentiment pour une crypto."""
         try:
             period = request.query_params.get('periode', '24h')
+            
+            if period == 'live':
+                return _build_ws_redirect_response(
+                    request,
+                    f'ws/sentiment/{crypto_symbol.upper()}/',
+                )
+            
             start_date = request.query_params.get('date_debut')
             end_date = request.query_params.get('date_fin')
             
@@ -484,6 +548,21 @@ data.data.forEach(point => {
 Les bornes `confidence_interval_low` et `confidence_interval_high` représentent
 l'intervalle dans lequel le prix a ~68% de chances de se trouver (±1 écart-type).
 
+## Mode Live (WebSocket)
+
+Avec `periode=live`, la réponse contient l'URL WebSocket à utiliser :
+```
+ws://<host>/ws/prediction/<symbol>/
+```
+
+```javascript
+const ws = new WebSocket('ws://localhost:8000/ws/prediction/BTC/');
+ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    console.log('Prediction:', data.predicted_price);
+};
+```
+
 ## Limites
 
 - Maximum 1000 résultats par requête
@@ -514,6 +593,13 @@ l'intervalle dans lequel le prix a ~68% de chances de se trouver (±1 écart-typ
         """Récupère l'historique des prédictions pour une crypto."""
         try:
             period = request.query_params.get('periode', '24h')
+            
+            if period == 'live':
+                return _build_ws_redirect_response(
+                    request,
+                    f'ws/prediction/{crypto_symbol.upper()}/',
+                )
+            
             start_date = request.query_params.get('date_debut')
             end_date = request.query_params.get('date_fin')
             
@@ -548,7 +634,7 @@ l'intervalle dans lequel le prix a ~68% de chances de se trouver (±1 écart-typ
 class TickerHistoryView(APIView):
     """
     API pour récupérer l'historique des tickers (prix).
-    Endpoint: /api/v1/ticker/historique/?pair=XBT/USD
+    Endpoint: /api/v1/ticker/historique/?pair=BTC/USD
     """
     
     @extend_schema(
@@ -567,7 +653,7 @@ Chaque ticker inclut le dernier prix, le bid, l'ask et le volume 24h.
 
 | Paire | Description |
 |-------|-------------|
-| `XBT/USD` | Bitcoin (Kraken utilise XBT) |
+| `BTC/USD` | Bitcoin |
 | `ETH/USD` | Ethereum |
 | `SOL/USD` | Solana |
 | `ADA/USD` | Cardano |
@@ -580,7 +666,7 @@ Chaque ticker inclut le dernier prix, le bid, l'ask et le volume 24h.
 
 ```javascript
 // Récupérer l'historique des prix
-const response = await fetch('/api/v1/ticker/historique/?pair=XBT/USD&periode=24h');
+const response = await fetch('/api/v1/ticker/historique/?pair=BTC/USD&periode=24h');
 const data = await response.json();
 
 // Créer un graphique candlestick
@@ -595,6 +681,21 @@ Le spread (ask - bid) indique la liquidité du marché:
 - **0.1% - 0.5%** : Normal
 - **> 0.5%** : Faible liquidité
 
+## Mode Live (WebSocket)
+
+Avec `periode=live`, la réponse contient l'URL WebSocket à utiliser :
+```
+ws://<host>/ws/ticker/<base>/<quote>/
+```
+
+```javascript
+const ws = new WebSocket('ws://localhost:8000/ws/ticker/BTC/USD/');
+ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    console.log('Prix:', data.last, 'Bid:', data.bid, 'Ask:', data.ask);
+};
+```
+
 ## Limites
 
 - Maximum 1000 résultats par requête
@@ -606,9 +707,9 @@ Le spread (ask - bid) indique la liquidité du marché:
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
                 required=False,
-                description='Paire de trading (ex: XBT/USD, ETH/USD). Note: utilisez XBT pour Bitcoin. Si non fourni, retourne toutes les paires.',
+                description='Paire de trading (ex: BTC/USD, ETH/USD). Si non fourni, retourne toutes les paires.',
                 examples=[
-                    OpenApiExample('Bitcoin', value='XBT/USD'),
+                    OpenApiExample('Bitcoin', value='BTC/USD'),
                     OpenApiExample('Ethereum', value='ETH/USD'),
                     OpenApiExample('Solana', value='SOL/USD'),
                 ]
@@ -627,6 +728,15 @@ Le spread (ask - bid) indique la liquidité du marché:
         try:
             pair = request.query_params.get('pair')
             period = request.query_params.get('periode', '24h')
+            
+            if period == 'live':
+                if pair and '/' in pair:
+                    base, quote = pair.split('/', 1)
+                    ws_path = f'ws/ticker/{base}/{quote}/'
+                else:
+                    ws_path = 'ws/ticker/<base>/<quote>/'
+                return _build_ws_redirect_response(request, ws_path)
+            
             start_date = request.query_params.get('date_debut')
             end_date = request.query_params.get('date_fin')
             
@@ -661,7 +771,7 @@ Le spread (ask - bid) indique la liquidité du marché:
 class TradeHistoryView(APIView):
     """
     API pour récupérer l'historique des trades.
-    Endpoint: /api/v1/trade/historique/?pair=XBT/USD
+    Endpoint: /api/v1/trade/historique/?pair=BTC/USD
     """
     
     @extend_schema(
@@ -680,7 +790,7 @@ Les données incluent le prix, le volume et le côté (achat/vente).
 
 ```javascript
 // Récupérer les trades récents
-const response = await fetch('/api/v1/trade/historique/?pair=XBT/USD&periode=1h');
+const response = await fetch('/api/v1/trade/historique/?pair=BTC/USD&periode=1h');
 const data = await response.json();
 
 // Calculer le ratio buy/sell
@@ -706,6 +816,21 @@ data.data.forEach(trade => {
 | Volume moyen | sum(volume) / count | Liquidité |
 | Price Impact | max - min | Volatilité |
 
+## Mode Live (WebSocket)
+
+Avec `periode=live`, la réponse contient l'URL WebSocket à utiliser :
+```
+ws://<host>/ws/trade/<base>/<quote>/
+```
+
+```javascript
+const ws = new WebSocket('ws://localhost:8000/ws/trade/BTC/USD/');
+ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    console.log('Trade:', data.price, data.volume, data.side);
+};
+```
+
 ## Limites
 
 - Maximum 5000 résultats par requête
@@ -717,9 +842,9 @@ data.data.forEach(trade => {
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
                 required=False,
-                description='Paire de trading (ex: XBT/USD, ETH/USD). Si non fourni, retourne toutes les paires.',
+                description='Paire de trading (ex: BTC/USD, ETH/USD). Si non fourni, retourne toutes les paires.',
                 examples=[
-                    OpenApiExample('Bitcoin', value='XBT/USD'),
+                    OpenApiExample('Bitcoin', value='BTC/USD'),
                     OpenApiExample('Ethereum', value='ETH/USD'),
                 ]
             ),
@@ -737,6 +862,15 @@ data.data.forEach(trade => {
         try:
             pair = request.query_params.get('pair')
             period = request.query_params.get('periode', '24h')
+            
+            if period == 'live':
+                if pair and '/' in pair:
+                    base, quote = pair.split('/', 1)
+                    ws_path = f'ws/trade/{base}/{quote}/'
+                else:
+                    ws_path = 'ws/trade/<base>/<quote>/'
+                return _build_ws_redirect_response(request, ws_path)
+            
             start_date = request.query_params.get('date_debut')
             end_date = request.query_params.get('date_fin')
             
@@ -946,6 +1080,21 @@ const majorAlerts = data.data.filter(a => Math.abs(a.change_percent) > 5);
 | 5% | Variation importante |
 | 10%+ | Mouvement majeur |
 
+## Mode Live (WebSocket)
+
+Avec `periode=live`, la réponse contient l'URL WebSocket à utiliser :
+```
+ws://<host>/ws/alert/
+```
+
+```javascript
+const ws = new WebSocket('ws://localhost:8000/ws/alert/');
+ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    console.log('Alerte:', data.pair, data.alert_type, data.change_percent);
+};
+```
+
 ## Limites
 
 - Maximum 500 résultats par requête
@@ -959,7 +1108,7 @@ const majorAlerts = data.data.filter(a => Math.abs(a.change_percent) > 5);
                 required=False,
                 description='Filtrer par paire de trading (optionnel)',
                 examples=[
-                    OpenApiExample('Bitcoin', value='XBT/USD'),
+                    OpenApiExample('Bitcoin', value='BTC/USD'),
                     OpenApiExample('Ethereum', value='ETH/USD'),
                     OpenApiExample('Toutes', value=None),
                 ]
@@ -978,6 +1127,12 @@ const majorAlerts = data.data.filter(a => Math.abs(a.change_percent) > 5);
         try:
             pair = request.query_params.get('pair')
             period = request.query_params.get('periode', '24h')
+            
+            if period == 'live':
+                return _build_ws_redirect_response(
+                    request, 'ws/alert/',
+                )
+            
             start_date = request.query_params.get('date_debut')
             end_date = request.query_params.get('date_fin')
             
@@ -1078,7 +1233,7 @@ avec le nombre d'enregistrements et la dernière mise à jour pour chaque type d
 
 | Type | Description |
 |------|-------------|
-| `ticker` | Données de prix (paires ex: XBT/USD) |
+| `ticker` | Données de prix (paires ex: BTC/USD) |
 | `trade` | Historique des trades |
 | `sentiment` | Analyse de sentiment |
 | `prediction` | Prédictions de prix |
@@ -1088,7 +1243,7 @@ avec le nombre d'enregistrements et la dernière mise à jour pour chaque type d
 ```javascript
 const response = await fetch('/api/v1/cryptos/');
 const data = await response.json();
-console.log(data.trading_pairs); // ['XBT/USD', 'ETH/USD', ...]
+console.log(data.trading_pairs); // ['BTC/USD', 'ETH/USD', ...]
 ```
     ''',
     responses={200: dict},
@@ -1113,8 +1268,8 @@ def list_cryptos(request):
                 'last_update': row['last_update']
             })
         
-        # Extraire les paires de trading uniques
-        pairs = [p['pair'] for p in trading_pairs]
+        # Extraire les paires de trading uniques (dédupliquées après conversion)
+        pairs = list(dict.fromkeys(p['pair'] for p in trading_pairs))
         
         return Response({
             'trading_pairs': pairs,

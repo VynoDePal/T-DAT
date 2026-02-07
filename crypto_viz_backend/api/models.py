@@ -28,7 +28,7 @@ class VisualizationParameter(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     name = models.CharField(max_length=100)
     crypto_symbol = models.CharField(max_length=50)
-    time_range = models.CharField(max_length=20, help_text="Ex: 24h, 7d, 30d")
+    time_range = models.CharField(max_length=20, help_text="Ex: live, 1min, 5min, 15min, 30min, 1h, 24h, 7d, 30d")
     chart_type = models.CharField(max_length=50, help_text="Ex: candlestick, line")
     indicators = models.JSONField(default=list, help_text="Liste des indicateurs actifs")
     created_at = models.DateTimeField(auto_now_add=True)

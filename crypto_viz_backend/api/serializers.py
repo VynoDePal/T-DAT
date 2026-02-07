@@ -100,7 +100,7 @@ class VisualizationParameterSerializer(serializers.ModelSerializer):
                 'help_text': 'Symbole de la crypto associée (ex: BTC, ETH)'
             },
             'time_range': {
-                'help_text': 'Plage temporelle (valeurs: 1h, 24h, 7d, 30d)'
+                'help_text': 'Plage temporelle (valeurs: live, 1min, 5min, 15min, 30min, 1h, 24h, 7d, 30d)'
             },
             'chart_type': {
                 'help_text': 'Type de graphique (valeurs: candlestick, line, area, bar)'
@@ -237,7 +237,7 @@ class PredictionDataSerializer(serializers.Serializer):
             description='Données de ticker pour la paire BTC/USD',
             value={
                 'timestamp': '2024-01-15T15:30:45.123456Z',
-                'pair': 'XBT/USD',
+                'pair': 'BTC/USD',
                 'last': 43250.50,
                 'bid': 43248.00,
                 'ask': 43252.00,
@@ -272,7 +272,7 @@ class TickerDataSerializer(serializers.Serializer):
     )
     pair = serializers.CharField(
         max_length=20,
-        help_text='Paire de trading (ex: "XBT/USD", "ETH/USD"). Note: Kraken utilise XBT pour Bitcoin'
+        help_text='Paire de trading (ex: "BTC/USD", "ETH/USD")'
     )
     last = serializers.FloatField(
         help_text='Dernier prix de transaction en USD'
@@ -295,7 +295,7 @@ class TickerDataSerializer(serializers.Serializer):
             summary='Transaction d\'achat Bitcoin',
             value={
                 'timestamp': '2024-01-15T15:30:45.123456Z',
-                'pair': 'XBT/USD',
+                'pair': 'BTC/USD',
                 'price': 43250.50,
                 'volume': 0.5,
                 'side': 'b'
@@ -327,7 +327,7 @@ class TradeDataSerializer(serializers.Serializer):
     )
     pair = serializers.CharField(
         max_length=20,
-        help_text='Paire de trading (ex: "XBT/USD", "ETH/USD")'
+        help_text='Paire de trading (ex: "BTC/USD", "ETH/USD")'
     )
     price = serializers.FloatField(
         help_text='Prix de la transaction en USD'
@@ -410,7 +410,7 @@ class ArticleDataSerializer(serializers.Serializer):
             description='Alerte générée suite à une hausse > 1%',
             value={
                 'timestamp': '2024-01-15T15:45:00.000000Z',
-                'pair': 'XBT/USD',
+                'pair': 'BTC/USD',
                 'last_price': 43500.00,
                 'change_percent': 1.5,
                 'threshold': 1.0,
@@ -445,7 +445,7 @@ class AlertDataSerializer(serializers.Serializer):
     )
     pair = serializers.CharField(
         max_length=20,
-        help_text='Paire de trading concernée (ex: "XBT/USD")'
+        help_text='Paire de trading concernée (ex: "BTC/USD")' 
     )
     last_price = serializers.FloatField(
         help_text='Prix au moment de l\'alerte en USD'
@@ -513,6 +513,26 @@ class HealthCheckResponseSerializer(serializers.Serializer):
     status = serializers.CharField(help_text='État du service: "healthy" ou "unhealthy"')
     service = serializers.CharField(help_text='Nom du service')
     version = serializers.CharField(help_text='Version de l\'API')
+
+
+class WebSocketRedirectSerializer(serializers.Serializer):
+    """Serializer pour la réponse de redirection WebSocket (periode=live)."""
+    live = serializers.BooleanField(
+        help_text='Indique que le mode temps réel est actif',
+    )
+    message = serializers.CharField(
+        help_text='Message indiquant d\'utiliser le WebSocket',
+    )
+    websocket_url = serializers.CharField(
+        help_text='URL WebSocket spécifique à cette ressource',
+    )
+    protocol = serializers.CharField(
+        help_text='Protocole à utiliser (toujours "websocket")',
+    )
+    endpoints = serializers.DictField(
+        child=serializers.CharField(),
+        help_text='Liste de tous les endpoints WebSocket disponibles',
+    )
 
 
 class ErrorResponseSerializer(serializers.Serializer):

@@ -157,9 +157,12 @@ def process_price_predictions(spark):
         .select("data.*") \
         .withColumn("timestamp", current_timestamp())
     
-    # Extraire le symbole de la crypto depuis la paire (ex: BTC/USD -> BTC)
+    # Extraire le symbole de la crypto depuis la paire (ex: XBT/USD -> BTC)
+    # Kraken utilise XBT pour Bitcoin, on normalise en BTC
     ticker_with_crypto = ticker_df \
-        .withColumn("crypto_symbol", expr("split(pair, '/')[0]"))
+        .withColumn("crypto_symbol",
+                    expr("CASE WHEN split(pair, '/')[0] = 'XBT' THEN 'BTC' "
+                         "ELSE split(pair, '/')[0] END"))
     
     # Créer une fenêtre glissante pour calculer les tendances
     windowed_ticker = ticker_with_crypto \

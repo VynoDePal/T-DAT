@@ -22,6 +22,7 @@ ALLOWED_HOSTS = ['*']
 
 # Application definition
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -35,6 +36,7 @@ INSTALLED_APPS = [
     'drf_spectacular_sidecar',
     'corsheaders',
     'django_prometheus',
+    'channels',
     
     # Local apps
     'api',
@@ -73,6 +75,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'crypto_viz.wsgi.application'
+ASGI_APPLICATION = 'crypto_viz.asgi.application'
 
 # Database
 # SQLite pour métadonnées Django uniquement (sessions, auth, config)
@@ -326,6 +329,137 @@ Gestion des crypto-monnaies suivies et des paramètres de visualisation.
 - Personnaliser les indicateurs techniques
             '''
         },
+        {
+            'name': 'WebSocket',
+            'description': '''
+**Streaming Temps Réel via WebSocket**
+
+Les endpoints WebSocket permettent de recevoir des données en continu sans polling.
+Utilisez `periode=live` sur les routes REST pour obtenir l'URL WebSocket correspondante.
+
+**Architecture:** Kafka → Redis Channel Layer → Django Channels → Client
+
+---
+
+### `ws/ticker/<base>/<quote>/` — Prix temps réel
+
+Source Kafka : `rawticker`
+
+```json
+{
+  "pair": "BTC/USD",
+  "last": 98500.50,
+  "bid": 98499.00,
+  "ask": 98501.00,
+  "volume_24h": 1234.56,
+  "timestamp": "2026-02-06T13:00:00Z"
+}
+```
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `pair` | string | Paire de trading (ex: `BTC/USD`) |
+| `last` | float | Dernier prix de transaction |
+| `bid` | float | Meilleure offre d\'achat |
+| `ask` | float | Meilleure offre de vente |
+| `volume_24h` | float | Volume échangé sur 24h |
+| `timestamp` | string | Horodatage ISO 8601 |
+
+---
+
+### `ws/trade/<base>/<quote>/` — Transactions temps réel
+
+Source Kafka : `rawtrade`
+
+```json
+{
+  "pair": "BTC/USD",
+  "price": 98500.50,
+  "volume": 0.5,
+  "side": "b",
+  "timestamp": "2026-02-06T13:00:00Z"
+}
+```
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `pair` | string | Paire de trading |
+| `price` | float | Prix de la transaction |
+| `volume` | float | Volume échangé |
+| `side` | string | `b` = achat, `s` = vente |
+| `timestamp` | string | Horodatage ISO 8601 |
+
+---
+
+### `ws/sentiment/<symbol>/` — Sentiment temps réel
+
+Source Kafka : `rawarticle` (articles analysés par NLP)
+
+```json
+{
+  "crypto_symbol": "BTC",
+  "sentiment_score": 0.85,
+  "sentiment_label": "positive",
+  "title": "Bitcoin hits new highs...",
+  "website": "cointelegraph.com"
+}
+```
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `crypto_symbol` | string | Symbole de la crypto |
+| `sentiment_score` | float | Score de sentiment (0.0 à 1.0) |
+| `sentiment_label` | string | `positive`, `neutral` ou `negative` |
+| `title` | string | Titre de l\'article source |
+| `website` | string | Site web source |
+
+---
+
+### `ws/prediction/<symbol>/` — Prédictions
+
+> **Note :** Ce consumer est prêt mais n\'est pas encore alimenté en temps réel.
+> Les prédictions sont générées par Spark et disponibles via l\'API REST historique.
+
+---
+
+### `ws/alert/` — Alertes de prix temps réel
+
+Source Kafka : `rawalert`
+
+```json
+{
+  "pair": "BTC/USD",
+  "last_price": 98500.00,
+  "change_percent": 1.5,
+  "threshold": 1.0,
+  "alert_type": "PRICE_UP",
+  "timestamp": "2026-02-06T13:00:00Z"
+}
+```
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `pair` | string | Paire concernée |
+| `last_price` | float | Prix au moment de l\'alerte |
+| `change_percent` | float | Variation en % |
+| `threshold` | float | Seuil de déclenchement |
+| `alert_type` | string | `PRICE_UP` ou `PRICE_DOWN` |
+| `timestamp` | string | Horodatage ISO 8601 |
+
+---
+
+### Connexion JavaScript
+
+```javascript
+const ws = new WebSocket('ws://localhost:8000/ws/ticker/BTC/USD/');
+ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    console.log('Prix:', data.last, 'Bid:', data.bid, 'Ask:', data.ask);
+};
+ws.onclose = () => console.log('Déconnecté');
+```
+            '''
+        },
     ],
     
     # Composants réutilisables
@@ -390,10 +524,25 @@ Gestion des crypto-monnaies suivies et des paramètres de visualisation.
 # CORS Configuration
 CORS_ALLOW_ALL_ORIGINS = True  # À restreindre en production
 
-# Redis Cache Configuration
+# Redis Configuration
 REDIS_HOST = os.environ.get('REDIS_HOST', 'redis')
 REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
 REDIS_DB = os.environ.get('REDIS_DB', '0')
+
+# Django Channels — Channel Layer via Redis
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [(REDIS_HOST, int(REDIS_PORT))],
+            'capacity': 1500,
+            'expiry': 10,
+        },
+    },
+}
+
+# Kafka Configuration
+KAFKA_BOOTSTRAP_SERVERS = os.environ.get('KAFKA_SERVERS', 'kafka:29092')
 
 CACHES = {
     'default': {
